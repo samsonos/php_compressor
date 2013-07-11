@@ -1,6 +1,8 @@
 <?php
 namespace Samson\Compressor;
 
+use samson\core\Core;
+
 use samson\core\iModule;
 use samson\core\File;
 use Samson\ResourceCollector\ResourceCollector;
@@ -341,7 +343,7 @@ class Compressor
 		// Создадим папку для свернутого сайта
 		if( !file_exists($this->output)) mkdir( $this->output, 0775, true );
 
-		elapsed('Собираю веб-приложение из: '.$this->input);
+		elapsed('Собираю веб-приложение из: '.$this->input.' в '.$this->output);
 		
 		// Скопируем директивы для сервера
 		copy( $this->input.'.htaccess', $this->output.'.htaccess' );
@@ -384,6 +386,10 @@ class Compressor
 			$this->compress_module( $m );			
 		}
 		
+		// Set core rendering model
+		if( $php_version == '5.2' ) s()->render_mode = \samson\core\iCore::RENDER_ARRAY;
+		else s()->render_mode = \samson\core\iCore::RENDER_VARIABLE;
+		
 		// Сериализируем ядро
 		$core_code = serialize(s());	
 
@@ -393,8 +399,7 @@ class Compressor
 		// Отключим вывод ошибок
 		if( $php_version != '5.2' ) 
 		{
-			$view_php .= "\n".'\samson\core\Error::$OUTPUT = true;';
-			$view_php .= "\n".'$GLOBALS["__compressor_mode"] = false;';
+			$view_php .= "\n".'\samson\core\Error::$OUTPUT = true;';			
 		}
 		else 
 		{	
@@ -408,25 +413,27 @@ class Compressor
 										
 					$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
 				}				
-			}
+			}			
 			
-			
-			// Укажем режим работы компрессора
-			$view_php .= "\n".'$GLOBALS["__compressor_mode"] = true;';
+			// Укажем режим работы компрессора			
 			$view_php .= "\n".'Error::$OUTPUT = true;';					
 		}			
 		
 		// Код представлений
-		$view_php .= "\n".'$GLOBALS["__compressor_files"] = array();';	
-
-		// Получим отпечаток ядра системы
-		//$view_php = "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($core_code).'\';'.$view_php;
-				
+		$view_php .= "\n".'$GLOBALS["__compressor_files"] = array();';			
+		
 		// Обработаем представления веб-приложения
 		foreach( $this->views as $rel_path => $c )
 		{				
 			// Если это шаблон веб-приложения - получим его содержимое из обработанной коллекции
-			if( isset( $this->templates[ $rel_path ] )) $c = $this->templates[ $rel_path ];			
+			if( isset( $this->templates[ $rel_path ] )) $c = $this->templates[ $rel_path ];		
+
+			// Iterating throw render stack, with one way template processing
+			foreach ( s()->render_stack as & $renderer )
+			{
+				// Выполним одностороннюю обработку шаблона
+				$c = call_user_func( $renderer, $c );
+			}	
 			
 			// Пустые представления не включаем
 			if( ! isset($c{0}) ) e('Файл представления ## - пустой', E_SAMSON_SNAPSHOT_ERROR, $rel_path );		
@@ -441,21 +448,28 @@ class Compressor
 					
 					// Определим какому модулю принадлежит представление
 					if( $module_path[0] == 'app' ) $view_path = $this->output.'local/';
-					else $view_path = $this->output.$module_path[0].'/';
-					
-					// Если папка с представлениями модуля не создана - создадим
-					if( !file_exists( $view_path ) ) mkdir( $view_path, 0755, true );
+					else $view_path = $this->output.$module_path[0].'/';					
 
 					// Добавим имя самого файла
-					$view_path .= basename($rel_path);					
+					$view_path .= substr($rel_path, strpos( $rel_path, __SAMSON_VIEW_PATH ) + strlen(__SAMSON_VIEW_PATH)+1 );					
+										
+					// Create recursevely folder structure for view
+					$view_dir = pathname( $view_path );
 					
+					if( !file_exists( $view_dir ) ) mkdir( $view_dir, 0755, true );
+																		
 					// Запишем сам файл
-					file_put_contents( $view_path, $c );					
+					file_put_contents( $view_path, $c );	
+
+					// Build relative path in compressed folder
+					$rel_view_path = str_replace( $this->output, '', $view_path);
+					
+					//trace( $rel_path.'-'.$rel_view_path.'('.$view_path.')');
 					
 					// Создадим ссылку в коде
-					$view_php .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = "'.$view_path.'";';
+					$view_php .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = "'.$rel_view_path.'";';
 				}				
-				// Болле новые версии PHP c поддержкой inline text
+				// Более новые версии PHP c поддержкой inline text
 				else $view_php .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] ='."<<<'EOT'"."\n".$c."\n"."EOT;";
 			}
 		}
@@ -545,6 +559,8 @@ class Compressor
 		// Уберем пробелы, новые строки и комментарии из кода
 		//$php = php_strip_whitespace( $this->output.'index.php' );
 		//file_put_contents( $this->output.'index.php', $php );
+		
+		elapsed('Site has been successfully compressed to '.$this->output);
 	}	
 	
 	/**
