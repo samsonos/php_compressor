@@ -206,7 +206,7 @@ class Compressor extends ExternalModule
 				{
 					//trace($matches['url'][$i].'-'.url()->base().$module.'/'.$path);
 					// Заменим путь в исходном файле
-					$text = str_replace( $matches['url'][$i], url()->base().$module.'/'.$path, $text );
+					$text = str_replace( $matches['url'][$i], url()->base().($module == 'local'?'':$module.'/').$path, $text );
 				}	
 			}
 		}
@@ -275,7 +275,10 @@ class Compressor extends ExternalModule
 		s()->render_mode = $this->view_mode;		
 		
 		// Load production configuration
-		Config::load( ConfigType::PRODUCTION );
+		Config::load( ConfigType::PRODUCTION );	
+		
+		// Change system path to relative type
+		s()->path('');
 		
 		// Create serialized copy
 		$core_code = serialize(s());
@@ -350,6 +353,9 @@ class Compressor extends ExternalModule
 	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = true  )
 	{	
 		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
+		
+		// Get realpath to web application
+		$realpath = s()->path();
 			
 		// Define rendering model depending on PHP version
 		if( version_compare( $php_version, '5.3.0', '>' ) ) $this->view_mode = Core::RENDER_ARRAY;
@@ -373,40 +379,44 @@ class Compressor extends ExternalModule
 			}		
 		}
 		
+		// Iterate only local modules
 		foreach ( s()->module_stack as $id => & $module )
-		{
+		{			
 			if ( is_a( $module, ns_classname( 'CompressableLocalModule', 'samson\core')))
-			{			
+			{
+				// Change path to module			
 				$module->path('');
 			}
-		}
-		
+		}		
 		
 		// If resourcer is loaded - copy css and js
 		if( isset( s()->module_stack['resourcer'] )) 
 		{
 			// Link
 			$rr = & s()->module_stack['resourcer'];
-			
+						
 			// Copy cached js resource
-			$this->copy_resource( $this->input.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
+			$this->copy_resource( $realpath.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
 			
 			// Copy cached css resource
-			$this->copy_resource( $this->input.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
+			$this->copy_resource( $realpath.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
 		}		
 		
 		// Set errors output
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'true':'false').';';
-			
-		// Add global base64 serialized core string 
+
+		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core()).'\';';
 								
-		// Remove standart framework entry point from index.php	- just preserve default controller		
-		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $this->input.'index.php' ], $matches ))
+		// Remove standart framework entry point from index.php	- just preserve default controller	
+		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
 		{
 			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
-		}			
-		$this->php[ self::NS_GLOBAL ][ $this->input.'index.php' ] = '';
+		}
+		else e('Default module definition not found - possible errors at compressed version');
+		
+		// Clear default entry point
+		$this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ] = '';
 	
 		// Set global namespace as last
 		$global_ns = $this->php[ self::NS_GLOBAL ];
@@ -427,10 +437,10 @@ class Compressor extends ExternalModule
 		
 		// Соберем коллекцию загруженных классов их файлов по пространствам имен
 		$this->classes_to_ns_files( get_declared_classes(), $classes );
-			
+				
 		// Исправим порядок файлов
 		foreach ( $this->php as $ns => & $files )
-		{			
+		{					
 			// Изменим порядок элементов в массиве файлов на правильный для конкретного NS
 			if( isset( $classes [ $ns ] ) ) $files = array_merge( $classes [ $ns ], $files );			 			
 		}		
