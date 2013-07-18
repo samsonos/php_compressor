@@ -6,5 +6,5 @@ function compressor__HANDLER( $php_version = null )
 {
 	s()->async(true);	
 	
-	new Compressor( $php_version );
+	m()->compress( $php_version );
 }

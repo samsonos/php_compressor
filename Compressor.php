@@ -1,12 +1,10 @@
 <?php
-namespace Samson\Compressor;
+namespace samson\compressor;
 
+use samson\core\ExternalModule;
 use samson\core\Core;
-
 use samson\core\iModule;
 use samson\core\File;
-use Samson\ResourceCollector\ResourceCollector;
-use Samson\ResourceCollector\ResourceType;
 use samson\core\Config;
 use samson\core\ConfigType;
 
@@ -15,123 +13,76 @@ use samson\core\ConfigType;
  *
  * @package SamsonPHP
  * @author Vitaly Iegorov <vitalyiegorov@gmail.com>
- * @version 0.1
+ * @version 0.5
  */
 // TODO: Интегрировать обратку представлений внутри шаблона а не дублировать одинаковый код
 // TODO: Анализатор классов которые добавляются, а вдруг они вообще не нужны?
 // TODO: Собирать "голый" код отдельно для его цельного выполнения
 // TODO: Обработка NS {} c фигурными скобками
-class Compressor 
+class Compressor extends ExternalModule
 {
-	/** Идентификатор глобального пространства имен */
+	/** Идентификатор модуля */
+	protected $id = 'compressor';
+	
+	/** Identifier of global namespace */
 	const NS_GLOBAL = '';
 	
-	/** Папка гбе будет находится свернутое веб-приложение */
+	/** Array key for storing last generated data */
+	const VIEWS = 'views';
+	
+	/** Output path for compressed web application */
 	public $output;
 	
+	/** Ignored resource extensions */
+	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs' );
+	
+	/** Ignored resource files */
+	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore' );
+	
 	/** Папка где размещается исходное веб-приложение */
-	public $input;
+	public $input = __SAMSON_CWD__;
+	
+	/** View rendering mode */
+	protected $view_mode = Core::RENDER_VARIABLE;
 	
 	/** Указатель на текущий сворачиваемый модуль */
-	public $current;
-	
-	/** Путь к главному файлу CSS */
-	public $css_file;
-	
-	/** Путь к главному файлу JS */
-	public $js_file;
+	protected $current;
 	
 	/** Коллекция уже обработанных файлов */
-	public $files = array();
-	
-	/** Коллекция файлов шаблонов */
-	public $templates = array();
-	
-	/** Коллекция файлов представлений */
-	public $views = array();
-	
-	/** Коллекция файлов с PHP кодом */
-	public $php = array();
-	
-	/** Коллекция ресурсов типа "Картинок" */
-	public $r_img = array();
-	
-	/** Коллекция ресурсов типа "Документы" */
-	public $r_doc = array();
-	
-	/** Коллекция ресурсов типа "Шрифты" */
-	public $r_font = array();
-	
-	/** Коллекция ресурсов типа "PHP код" */
-	public $r_php = array();
-	
-	/** Коллекция файлов которые необходимо игнорировать */
-	public $ignore = array( 'composer.json' );
-	
-	/** Шаблон для поиска команды установки шаблона веб-ариложения */
-	public $tmpl_marker = 's\(\s*\).*?->.*?template\s*\(\s*(\'|\")(?<path>[^\'\"]+)';
-	
-	/**
-	 * Скопировать файлы модуля в свернутое веб-приложение
-	 * 
-	 * @param array 	$files	Коллекция файлов для копирования
-	 * @param iModule 	$module	Модуль которому принадлежат файлы
-	 */
-	public function copy( $files, iModule & $module )
-	{			
-		// Получим полный путь к модулю
-		$path = realpath( $module->path() ).__SAMSON_PATH_SLASH__;
-	
-		// Папка модуля в свернутом варианте - для локальных пустышка
-		$module_folder = '';
+	protected $files = array();
 		
-		// Если это не локальный модуль - подставим папку модуля
-		if( $module->path() != s()->path() ) $module_folder = $module->id().'/';
-
-		// Переберем файлы
-		foreach ( $files as $file )
+	/** Collection for storing all php code by namespace */
+	protected $php = array( self::NS_GLOBAL => array() );
+		
+	/** @see \samson\core\ExternalModule::prepare() */
+	public function prepare()
+	{
+		// If output path not specified - set to final.HTTP_HOST/WEB_APP
+		if( !isset($this->output))
 		{
-			// Проверим запрещенные файлы
-			if( in_array( basename($file), $this->ignore )) continue;
-			//trace($path.' - '.$file);
-			// Получим относительный путь к ресурсу
-			$rel_path = str_replace( $path, '', $file );
-
-			// Сфорсируем путь к файлу в сжатой версии веб-приложения
-			$this->output_file = str_replace('\\', '/', $this->output.$module_folder.$rel_path.'');
-			
-			// Получим папку в свернутом веб-приложении
-			$this->output_dir = dirname( $this->output_file );
-
-			// Если выходная папка не существует - создадим её
-			if( !file_exists( $this->output_dir ) ) mkdir( $this->output_dir, 0755, true );
-						
-			// Если файл в выходной папке не существует или он устарел
-			if( ! file_exists( $this->output_file ) || ( filemtime( $file ) <> filemtime( $this->output_file )) ) 
-			{
-				elapsed( '  -- Обновляю файл: '.$this->output_file.' ----- '.$file);				
-	
-				// Скопируем файл	
-				copy( $file, $this->output_file );	
-
-				// Изменим время модификации исходного файла
-				touch( $file );
-			}
+			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
 		}
-	}	
+		
+		return parent::prepare();
+	}
 	
 	/**
 	 * Свернуть файл представления
 	 * @param string 	$view_file 	Полный путь к файлу представления
 	 * @param iModule 	$module		Указатель на модуль которому принадлежит это представление 
 	 */
-	public function compress_view( $view_file, iModule & $module = null )
-	{
-		// Получим относительный путь к ресурсу
-		$rel_path  = $this->rel_path( $view_file, $module );
+	public function compress_view( $view_file, iModule & $module )
+	{	
+		// Build relative path to module view
+		$out_rel_path  = str_replace( __SAMSON_VIEW_PATH, '', ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file));
+		$rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
+		
+		elapsed('  -- Preparing view: '.$view_file.'('.$rel_path.')' );
 		
 		// Прочитаем файл представления
 		$view_html = file_get_contents( $view_file );
+		
+		if( ! isset($view_file{0}) ) return e('View: ##(##) is empty', E_SAMSON_SNAPSHOT_ERROR, array($view_file, $rel_path) );
 		
 		// Найдем обращения к роутеру ресурсов
 		$view_html = preg_replace_callback( '/(<\?php)*\s*src\s*\(\s*(\'|\")*(?<path>[^\'\"\)]+)(\s*,\s*(\'|\")(?<module>[^\'\"\)]+))*(\'|\")*\s*\)\s*;*\s*(\?>)*/uis', array( $this, 'src_replace_callback'), $view_html );
@@ -139,132 +90,111 @@ class Compressor
 		// Сожмем HTML
 		$view_html = Minify_HTML::minify($view_html);
 		
-		// Заполним специальную коллекцию содержания представлений системы
-		$this->views[ $rel_path ] = $view_html;
-	}
-	
-	/**
-	 * Обработать файл шаблона веб-приложения
-	 *
-	 * @param string 	$tmpl_path 	Относительный путь к файлу шаблона
-	 * @param iModule 	$module		Модуль которому принадлежит этот файл
-	 */
-	public function compress_template( $tmpl_path, $module = NULL )
-	{
-		// Безопасно получим модуль
-		$module = m( $module );
-	
-		// Вережем из пути к шаблону часть пути до переданного модуля
-		$tmpl_path = str_replace( $module->path(), '', $tmpl_path);
-	
-		// Получим полный правильный путь
-		$tmpl_full_path = realpath($module->path().$tmpl_path);
-	
-		// Получим относительный путь к представлению в свернутом веб-приложении
-		$trp = $this->rel_path( $tmpl_full_path, $module );
-			
-		// Прочитаем файл шаблона
-		$_php = file_get_contents( $tmpl_full_path );
-	
-		elapsed('   ---- Обрабатываю файл шаблона:'.$module->path().$tmpl_path.'['.$trp.']');
-	
-		// Обработаем шаблон
-		$_php = s()->generate_template( $_php, url()->base().$this->css_file, url()->base().$this->js_file );
+		// Iterating throw render stack, with one way template processing
+		foreach ( s()->render_stack as & $renderer )
+		{
+			// Put view throught renderer handler
+			$view_html = call_user_func( $renderer, $view_html, array(), $this );
+		}	
 		
-		// Найдем обращения к роутеру ресурсов
-		$_php = preg_replace_callback( '/(<\?php)*\s*src\s*\(\s*(\'|\")*(?<path>[^\'\"\)]+)(\s*,\s*(\'|\")(?<module>[^\'\"\)]+))*(\'|\")*\s*\)\s*;*\s*(\?>)*/uis', array( $this, 'src_replace_callback'), $_php );		
+		// Template generator
+		$view_html = s()->generate_template( $view_html );
+		
+		// If rendering from array
+		if( $this->view_mode == Core::RENDER_ARRAY ) $view_php = '\''.$out_rel_path.'\';'; 		
+		// If rendering from variables is selected
+		else if( $this->view_mode == Core::RENDER_VARIABLE ) $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;"; 		
 	
-		// Запишем код обработанного шаблона в специальную коллекцию
-		$this->templates[ $trp ] = $_php;
+		// Add view code to final global namespace
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = '.$view_php;
 	}
 	
 	/**
 	 * Свернуть модуль
 	 * @param iModule $module Указатель на модуль для сворачивания
 	 */
-	public function compress_module( iModule & $module )
+	public function compress_module( iModule & $module, array & $data )
 	{
 		// Идентификатор модуля
-		$id = $module->id();		
+		$id = $module->id();	
+		$module_path = $module->path();
 		
+		elapsed('  - Compressing module: '.$id.' from '.$module_path );
+			
 		// Сохраним указатель на текущий модуль
 		$this->current = & $module;
+		
+		// Build output module path
+		$module_output_path = $id == 'local' ? '' : $id.'/';
 			
-		elapsed('  - Сворачиваю модуль '.$id.'[ PHP: '.sizeof( $this->r_php[ $id ] ).', IMG:'.sizeof( $this->r_img[ $id ] ).', DOC:'.sizeof( $this->r_doc[ $id ] ).']' );
-		
-		//trace($id.'-'.$module->path());
-		
-		// Если путь к модулю не существует - ничего не делаем с ним
-		if( !file_exists($module->path())) return false;
-		
-		// Если у модуля есть картинки - скопируем их
-		if( sizeof( $this->r_img[ $id ] ) ) $this->copy( $this->r_img[ $id ], $module  );
-		// Если у модуля есть документы - скопируем их
-		if( sizeof( $this->r_doc[ $id ] ) ) $this->copy( $this->r_doc[ $id ], $module  );
-		// Если у модуля есть документы - скопируем их
-		if( sizeof( $this->r_font[ $id ] ) ) $this->copy( $this->r_font[ $id ], $module  );
-		
-		// Соберем коллекцию кода модуля разбитую по NS/File
-		$module_php = array();	
-		
-		// Выполним предбработчик сжатия модуля
-		$module->beforeCompress( $this, $module_php );
-		
-		// Если у модуля есть файл подключения - используем его
-		if( file_exists( $module->path().'include.php' ) )
-		{						
-			$this->compress_php( $module->path().'include.php', $module, $module_php );
-		}		
-		
-		// Коллекция представлений модуля
-		$views = array();
-		
-		// Соберем PHP код модуля
-		foreach ($this->r_php[ $id ] as $php_file )
-		{				
-			// Если в пути есть папка VIEW считаем что это папка для представлений и не собираем её в PHP
-			if( stripos( dirname($php_file), '\\view') === FALSE && stripos( dirname($php_file), '/view') === FALSE )
-			{								
-				// Просто соберем код файла
-				$this->compress_php( $php_file, $module, $module_php );								
-			}
-			// Это представление - запишем в отдельную коллекцию
-			else $views[] = $php_file;
-			
-			// Соберем весь PHP код модуля
-			$php_code = $this->code_array_to_str( $module_php  );						
-		
-			// Найдем вызов функции по установке шаблона
-			if( preg_match_all('/'.$this->tmpl_marker.'/sui', $php_code, $matches ) )
+		// Call special method enabling module personal resource pre-management on compressing
+		if( $module->beforeCompress( $this, $this->php ) !== false )
+		{
+			// Iterate module resources
+			foreach ( $data['resources'] as $extension => $resources )
 			{
-				// Переберем все обращения к шаблонам в файле и обработаем их
-				foreach ( $matches['path'] as $tmpl_path ) $this->compress_template( $tmpl_path, $module );
-			}				
+				// Iterate only allowed resource types
+				if( !in_array( $extension , $this->ignored_extensions ) ) foreach ( $resources as $resource )
+				{
+					// Get only filename
+					$filename = basename( $resource );
+						
+					// Copy only allowed resources
+					if( !in_array( $filename, $this->ignored_resources ) )
+					{
+						// Build relative module resource path
+						$relative_path = str_replace( $module_path, '', $resource );
+		
+						// Build correct destination folder
+						$dst = $this->output.$module_output_path.$relative_path;
+							
+						// Copy/update file if nessesary
+						$this->copy_resource( $resource, $dst );
+					}
+				}
+			}
+		
+			// Internal collection of module php code, not views
+			$module_php = array();
+		
+			// Iterate module plain php code
+			foreach ( $data['php'] as $php ) $this->compress_php( $php, $module, $module_php );
+			// Iterate module controllers php code
+			foreach ( $data['controllers'] as $php ) $this->compress_php( $php, $module, $module_php );
+			// Iterate module model php code
+			foreach ( $data['models'] as $php ) $this->compress_php( $php, $module, $module_php );
+			// Iterate module views
+			foreach ( $data['views'] as $php ) $this->compress_view( $php, $module );			
+		}	
 			
-			// Прочитаем содержимое представления из коллекции представлений
-			foreach ( $views as $php_file ) $this->compress_view( $php_file, $module );
-		}		
+		// Call special method enabling module personal resource post-management on compressing
+		$module->afterCompress( $this, $this->php );
 		
-		// Выполним постобработчик сжатия модуля
-		$module->afterCompress( $this, $module_php );		
-		
-		// Установим новый правильный путь к ресурсам модуля в свернутом веб-приложении
-		if( $module->path() != s()->path() ) $module->path( $id.'/');
-		else $module->path('');
-		
-		// Установим модулю параметры с нужной конфигурацией
-		if( isset( Config::$data[ $module->core_id() ] ) ) $module->init( Config::$data[ $module->core_id() ] );
-		
-		// Занесем весю коллекцию кода модуля в глобальное хранилище
+		// Gather all code in to global code collection with namespaces
 		$this->code_array_combine( $module_php, $this->php );
+		
+		// Change module path
+		$module->path( $id.'/' );
 	}
 	
 	/**
-	 * Распознать ссылку по URL
+	 * Copy resource handler for CSS rseources with rewriting url's
+	 * @param string $src	Path to source CSS file
+	 * @param string $dst	Path to destination CSS file
+	 * @param string $action Action to perform 
 	 */
-	// TODO: Сделать нормальный механизм разпознования URL через ResourceRouter
-	public function resolve_css_url( $text )
+	public function copy_css( $src, $dst, $action )
 	{		
+		// If we must create new CSS resource - delete all old CSS resources
+		if( $action == 'Creating' )	foreach ( File::dir( pathname($dst), 'css' ) as $path) 
+		{
+			File::clear($path);
+			break; // limit to one delete for safety
+		}	
+		
+		// Read source file
+		$text = file_get_contents( $src );
+		
 		// Найдем ссылки в ресурса
 		if( preg_match_all( '/url\s*\(\s*(\'|\")*(?<url>[^\'\"\)]+)\s*(\'|\")*\)/i', $text, $matches ) )
 		{			
@@ -272,33 +202,39 @@ class Compressor
 			if( isset( $matches['url']) ) for ($i = 0; $i < sizeof($matches['url']); $i++)
 			{
 				// Получим путь к ресурсу используя маршрутизацию
-				$url = $matches['url'][$i];	
-
-				// Если это модифицированное URL
-				if( strpos( $url, 'resourcerouter') )
-				{					
-					// Разпознаем строку URL и выделим из нее необходимые переременные
-					$params = substr( $url, strpos( $url, '?') );
-					parse_str(  $params, $vars );
-			
-					// Определим имя модуля
-					$mod = str_replace( $params, '', $url);
-					$mod = explode('/', $mod);
-					$mod = trim($mod[ sizeof($mod) - 1 ]);		
-
-					// Получим реальное имя модулю
-					$mod = m($mod)->id();
-					
-					if( m($mod)->path() == s()->path() ) $mod = '';
-					else $mod .= '/';
-			
+				if( m('resourcer')->parseURL( $matches['url'][$i], $module, $path ))
+				{
+					//trace($matches['url'][$i].'-'.url()->base().$module.'/'.$path);
 					// Заменим путь в исходном файле
-					$text = str_replace( $url, url()->base().$mod.$vars['?p'], $text );
-				}
+					$text = str_replace( $matches['url'][$i], url()->base().$module.'/'.$path, $text );
+				}	
 			}
 		}
 	
-		return $text;
+		// Write destination file
+		file_put_contents( $dst, $text );	
+	}
+	
+	/**
+	 * Copy resource handler for JS resources with rewriting url's
+	 * @param string $src	Path to source CSS file
+	 * @param string $dst	Path to destination CSS file
+	 * @param string $action Action to perform
+	 */
+	public function copy_js( $src, $dst, $action )
+	{
+		// If we must create new CSS resource - delete all old CSS resources
+		if( $action == 'Creating' )	foreach ( File::dir( pathname($dst), 'js' ) as $path)
+		{
+			File::clear($path);
+			break; // limit to one delete for safety
+		}
+	
+		// Read source file
+		$text = file_get_contents( $src );		
+	
+		// Write destination file
+		file_put_contents( $dst, $text );
 	}
 	
 	/**
@@ -323,165 +259,164 @@ class Compressor
 		//e('Файл представления ## - Обращение к роутеру ресурсов через переменную ##', E_SAMSON_SNAPSHOT_ERROR, array($view_path, $path));
 	}
 	
-	/** Конструктор */
-	public function __construct( $php_version = NULL )
+	/** Prepare core serialized string only with nessesar and correct data	*/	
+	public function compress_core()
 	{
-		// Внутренняя коллекция для собирания кода 
-		$this->php = array( self::NS_GLOBAL => array() );
-		
-		// Выгрузим из ядра системы все модули который не наследуют интерфейс сжатия iModuleCompressable
-		foreach ( s()->module_stack as $id => $m ) if ( !($m instanceof \samson\core\iModuleCompressable) ) s()->unload( $id );	
-									
-		// Загрузим продакшн конфигурацию для модулей
-		Config::load( ConfigType::PRODUCTION );
-		
-		// Подготовим папку для "свернутой" версии сайта, с учетом текущего веб-приложения
-		$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
-		// Входная папка
-		$this->input = getcwd().'/';	
-		
-		// Создадим папку для свернутого сайта
-		if( !file_exists($this->output)) mkdir( $this->output, 0775, true );
-
-		elapsed('Собираю веб-приложение из: '.$this->input.' в '.$this->output);
-		
-		// Скопируем директивы для сервера
-		copy( $this->input.'.htaccess', $this->output.'.htaccess' );
-		
-		// Сохраним имя главного CSS ресурса
-		$this->css_file = ResourceCollector::$collected['css'][ 'name' ];
-		// Сохраним имя главного JS ресурса
-		$this->js_file = ResourceCollector::$collected['js'][ 'name' ];		
-				
-		// Переберем основные типы ресурсов
-		$output_resources = array();
-		foreach ( File::dir( $this->output, array('css','js'), '', $output_resources, 0 ) as $file ) File::clear( $file );					
-		// Запишем новые файлы ресурсов
-		file_put_contents( $this->output.$this->css_file, $this->resolve_css_url(file_get_contents( ResourceCollector::$collected[ 'css' ][ 'path' ]))); 
-		file_put_contents( $this->output.$this->js_file, file_get_contents( ResourceCollector::$collected[ 'js' ][ 'path' ]) );						
-		
-		// Соберем все PHP ресурсы
-		$this->r_php = ResourceCollector::gather( ResourceType::$PHP );
-		// Соберем все DOC ресурсы
-		$this->r_doc = ResourceCollector::gather( ResourceType::$DOC );
-		// Соберем все IMG ресурсы
-		$this->r_img = ResourceCollector::gather( ResourceType::$IMG );	
-		// Соберем все IMG ресурсы
-		$this->r_font = ResourceCollector::gather( ResourceType::$FONT );		
-		
-		// Прочитаем главный шаблон веб-приложения
-		$this->compress_template( s()->template(), m('local') );	
-			
-		// Соберем пусковой файл
-		$this->compress_php( $this->input.'index.php', m('local'), $this->php );	
-		
-		// Заполним коллекции модулей
-		foreach ( s()->module_stack as $id => & $m )
+		// Unload all modules from core that does not implement interface iModuleCompressable
+		foreach ( s()->module_stack as $id => $m ) 
 		{
-			//trace($id.'-'.$m->core_id().'-'.$m->id());
-			// Модуль вывода пропустим
-			if( $m->core_id() == '_output') continue;
-			
-			// Сожмем модуль
-			$this->compress_module( $m );			
+			if ( !( is_a( $m, ns_classname( 'iModuleCompressable', 'samson\core')))) 
+			{					
+				s()->unload( $id );
+			}
 		}
 		
 		// Set core rendering model
-		if( $php_version == '5.2' ) s()->render_mode = \samson\core\iCore::RENDER_ARRAY;
-		else s()->render_mode = \samson\core\iCore::RENDER_VARIABLE;
+		s()->render_mode = $this->view_mode;		
 		
-		// Сериализируем ядро
-		$core_code = serialize(s());	
-
-		// Код для представлений и глобальных переменных
-		$view_php = '';
+		// Load production configuration
+		Config::load( ConfigType::PRODUCTION );
 		
-		// Отключим вывод ошибок
-		if( $php_version != '5.2' ) 
+		// Create serialized copy
+		$core_code = serialize(s());
+		
+		// Find all class description in serialized core string
+		if( ($this->view_mode == Core::RENDER_ARRAY) && preg_match_all('/O:(?<length>\d+):\"(?<class>[^\"]+)\"/', $core_code, $matches ))
 		{
-			$view_php .= "\n".'\samson\core\Error::$OUTPUT = true;';			
-		}
-		else 
-		{	
-			// Найдем все описания классов
-			if( preg_match_all('/O:(?<length>\d+):\"(?<class>[^\"]+)\"/', $core_code, $matches ))
-			{				
-				// Очистим NS из сериализированных объектов в ядре
-				for ( $i = 0; $i < sizeof($matches[0]); $i++ )
-				{
-					$class = basename($matches[ 'class' ][ $i ]);
-										
-					$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
-				}				
-			}			
-			
-			// Укажем режим работы компрессора			
-			$view_php .= "\n".'Error::$OUTPUT = true;';					
-		}			
-		
-		// Код представлений
-		$view_php .= "\n".'$GLOBALS["__compressor_files"] = array();';			
-		
-		// Обработаем представления веб-приложения
-		foreach( $this->views as $rel_path => $c )
-		{				
-			// Если это шаблон веб-приложения - получим его содержимое из обработанной коллекции
-			if( isset( $this->templates[ $rel_path ] )) $c = $this->templates[ $rel_path ];		
-
-			// Iterating throw render stack, with one way template processing
-			foreach ( s()->render_stack as & $renderer )
+			// Remove namespaces in class definition
+			for ( $i = 0; $i < sizeof($matches[0]); $i++ )
 			{
-				// Выполним одностороннюю обработку шаблона
-				$c = call_user_func( $renderer, $c );
-			}	
+				// Generate correct class name without namespaces
+				$class = ns_classname( classname($matches[ 'class' ][ $i ]), nsname(classname($matches[ 'class' ][ $i ])));
+		
+				// Change class description in serialized string
+				$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
+			}
+		}		
+	
+		return $core_code;
+	}	
+	
+	/**
+	 * Copy file from source location to destination location with
+	 * analyzing last file modification time, and copying only changed files
+	 * 
+	 * @param string $src source file
+	 * @param string $dst destination file
+	 */
+	public function copy_resource( $src, $dst, $handler = null )
+	{
+		if( !file_exists( $src )  ) return e('Cannot copy file - Source file(##) does not exists', E_SAMSON_SNAPSHOT_ERROR, $src );
+		
+		// Action to do
+		$action = null;
+		
+		// If destination file does not exists
+		if( !file_exists( $dst ) ) $action = 'Creating';
+		// If source file has been changed
+		else if( filemtime( $src ) <> filemtime( $dst ) ) $action = 'Updating';		
+
+		// If we know what to do
+		if( isset( $action ))
+		{
+			elapsed( '  -- '.$action.' file '.$dst.' from '.$src );
 			
-			// Пустые представления не включаем
-			if( ! isset($c{0}) ) e('Файл представления ## - пустой', E_SAMSON_SNAPSHOT_ERROR, $rel_path );		
-			// Создадим PHP код для хранения представления в специальной коллекции
-			else 
-			{		
-				// Старые версии PHP - копируем файлі представлений
-				if( $php_version == '5.2' )
-				{
-					// Путь к представлению модуля
-					$module_path = explode( '/', $rel_path );
-					
-					// Определим какому модулю принадлежит представление
-					if( $module_path[0] == 'app' ) $view_path = $this->output.'local/';
-					else $view_path = $this->output.$module_path[0].'/';					
+			// Create folder structure if nessesary
+			$dir_path = pathname( $dst );
+			if( !file_exists( $dir_path )) 
+			{
+				elapsed( '  -- Creating folder structure '.$dir_path.' from '.$src );
+				mkdir( $dir_path, 0755, true );
+			}
+			
+			// If file handler specified 
+			if( is_callable($handler) ) call_user_func( $handler, $src, $dst, $action );
+			// Copy file
+			else copy( $src, $dst );
+				
+			// Sync source file with copied file
+			touch( $src );		
+		}
+	}
+	
+	/**
+	 * Compress web-application
+	 * 
+	 * @param string $php_version 	PHP version to support
+	 * @param boolean $minify_php 	Remove comments new lines and multiple spaces in PHP
+	 * @param boolean $no_errors 	Disable errors output
+	 *
+	 */
+	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = true  )
+	{	
+		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
+			
+		// Define rendering model depending on PHP version
+		if( version_compare( $php_version, '5.3.0', '>' ) ) $this->view_mode = Core::RENDER_ARRAY;
+				
+		// Создадим папку для свернутого сайта
+		if( !file_exists($this->output)) mkdir( $this->output, 0775, true );	
 
-					// Добавим имя самого файла
-					$view_path .= substr($rel_path, strpos( $rel_path, __SAMSON_VIEW_PATH ) + strlen(__SAMSON_VIEW_PATH)+1 );					
-										
-					// Create recursevely folder structure for view
-					$view_dir = pathname( $view_path );
-					
-					if( !file_exists( $view_dir ) ) mkdir( $view_dir, 0755, true );
-																		
-					// Запишем сам файл
-					file_put_contents( $view_path, $c );	
-
-					// Build relative path in compressed folder
-					$rel_view_path = str_replace( $this->output, '', $view_path);
-					
-					//trace( $rel_path.'-'.$rel_view_path.'('.$view_path.')');
-					
-					// Создадим ссылку в коде
-					$view_php .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = "'.$rel_view_path.'";';
-				}				
-				// Более новые версии PHP c поддержкой inline text
-				else $view_php .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] ='."<<<'EOT'"."\n".$c."\n"."EOT;";
+		// Define global views collection
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
+		
+		// Iterate core ns resources collection
+		foreach ( s()->load_stack as $ns => & $data )
+		{	
+			// Get module instance				
+			$module = & s()->module_stack[ $data['id'] ];		
+			
+			// Work only with copressable modules
+			if ( is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core')))
+			{						
+				$this->compress_module( $module, $data );					
+			}		
+		}
+		
+		foreach ( s()->module_stack as $id => & $module )
+		{
+			if ( is_a( $module, ns_classname( 'CompressableLocalModule', 'samson\core')))
+			{			
+				$module->path('');
 			}
 		}
-		$view_php .= "\n";		
 		
-		// Добавим объявление глобальных переменных в начало глобального NS
-		$this->php[ self::NS_GLOBAL ]['views'] = $view_php;	
 		
-		// Перенесем глобальное пространство имен в конец файла
-		$global_ns = $this->php[ self::NS_GLOBAL ];		
-		unset( $this->php[ self::NS_GLOBAL ] );		
-		$this->php[ self::NS_GLOBAL ] = $global_ns;		
+		// If resourcer is loaded - copy css and js
+		if( isset( s()->module_stack['resourcer'] )) 
+		{
+			// Link
+			$rr = & s()->module_stack['resourcer'];
+			
+			// Copy cached js resource
+			$this->copy_resource( $this->input.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
+			
+			// Copy cached css resource
+			$this->copy_resource( $this->input.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
+		}		
+		
+		// Set errors output
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'true':'false').';';
+			
+		// Add global base64 serialized core string 
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core()).'\';';
+								
+		// Remove standart framework entry point from index.php	- just preserve default controller		
+		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $this->input.'index.php' ], $matches ))
+		{
+			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
+		}			
+		$this->php[ self::NS_GLOBAL ][ $this->input.'index.php' ] = '';
+	
+		// Set global namespace as last
+		$global_ns = $this->php[ self::NS_GLOBAL ];
+		unset( $this->php[ self::NS_GLOBAL ] );
+		$this->php[ self::NS_GLOBAL ] = $global_ns;
+		
+		// Set view data to the end of global namespace
+		$s = $this->php[ self::NS_GLOBAL ][ self::VIEWS ];
+		unset( $this->php[ self::NS_GLOBAL ][ self::VIEWS ] );
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = $s;		
 		
 		// Исправим порядок следования файлов в модуле на правильный
 		// т.к. в PHP описание классов должно идти строго по порядку 
@@ -492,66 +427,16 @@ class Compressor
 		
 		// Соберем коллекцию загруженных классов их файлов по пространствам имен
 		$this->classes_to_ns_files( get_declared_classes(), $classes );
-		
+			
 		// Исправим порядок файлов
 		foreach ( $this->php as $ns => & $files )
 		{			
 			// Изменим порядок элементов в массиве файлов на правильный для конкретного NS
 			if( isset( $classes [ $ns ] ) ) $files = array_merge( $classes [ $ns ], $files );			 			
-		}	
+		}		
 		
 		// Соберем весь PHP код в один файл
-		$index_php = $this->code_array_to_str( $this->php, $php_version == '5.2' );			
-		
-		// Старый PHP
-		if( $php_version == '5.2' )
-		{
-			// Переберем все NS 
-			foreach ( $this->php as $ns => $files )
-			{				
-				if( $ns == self::NS_GLOBAL ) continue;
-				
-				elapsed('Очищаем пространство имен: '.$ns);
-				
-				// Очистим все NS из кода т.к. код у нас в одном файле и в правильном порядке
-				$index_php = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $index_php );				
-			}
-		}	
-		
-		// Если это новая версия откроем NS
-		if( $php_version != '5.2' ) $index_php .= "\n".'namespace {';
-		
-		// Установим код ядра
-		$index_php .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($core_code).'\';';
-		
-		// Обработаем пути к основным сущностям системы т.к. теперь все они в одном файле
-		// Установим новый путь к фреймворку SamsonPHP
-		if( preg_match('/define\s*\(\s*\'__SAMSON_PATH__\'\s*,\s*([^\)]+)\s*\)/i', $index_php, $matches ) ) $index_php = str_replace( $matches[ 1 ], "''", $index_php );
-		// Уберем изменение маршрута к файлам приложения т.к. мы все собираем в один файл
-		if( preg_match('/s\s*\(\s*\)->path\((?<path>[^)]*)\);/i', $index_php, $matches ) ) $index_php = str_replace( $matches[ 0 ], ';', $index_php );
-		
-		// Найдем главный загрузчик ядра
-		if( preg_match_all('/\s*s\s*\(\s*\)\s*->(load|import|handler)[^;]*/i', $index_php, $matches ) )
-		{	
-			// Найдем имя модуля по умолчанию
-			$main_model = '';		
-			
-			// Уберем загрузку модулей и прочие обращения к ядру
-			foreach ( $matches[0] as $match ) 
-			{
-				// Очистим обращение к ядру
-				$index_php = str_replace( $match, '', $index_php );
-
-				// Поищем имя модуля по умолчанию
-				if( !isset($main_model{0}) && preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $match, $matches2 )) $main_model = $matches2['default'];
-			}					
-			
-			// Установим обращение к системе			
-			$index_php .= "\n".'s()->start("'.$main_model.'");';		
-		}	
-		
-		// Если это новая версия закроем NS
-		if( $php_version != '5.2' ) $index_php .= "\n".'}';
+		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );		
 				
 		// Запишем пусковой файл
 		file_put_contents( $this->output.'index.php', '<?php '.$index_php."\n".'?>' );		
@@ -561,38 +446,7 @@ class Compressor
 		//file_put_contents( $this->output.'index.php', $php );
 		
 		elapsed('Site has been successfully compressed to '.$this->output);
-	}	
-	
-	/**
-	 * Получить относителый путь к модулю в свернутом веб-приложении
-	 * 
-	 * @param string $full_path	Полный путь к файлу
-	 * @param string $module	Модуль которому принадлежит файл
-	 * @return mixed	Относительный путь к файлу в свернутом веб-приложении
-	 */
-	public function rel_path( $full_path, $module = null )
-	{
-		// Безопасно получим модуль
-		$module = m( $module );		
-		
-		// Полный путь к модулю в правильном формате
-		$module_path = realpath( $module->path() ).__SAMSON_PATH_SLASH__;		
-		
-		// Получим реальный путь в правильном формате
-		$full_path = realpath( $full_path );	
-		
-		// Папка модуля в свернутом варианте - для локальных пустышка
-		$module_folder = '';
-			
-		// Если это не локальный модуль - подставим папку модуля
-		if( $module->path() != s()->path() ) $module_folder = $module->id().'/';			
-					
-		// Получим относительный путь к ресурсу внутри модуля
-		$rel_path = str_replace( $module_path, '', $full_path );
-		
-		// Сформируем относительный путь внутри свернутого веб-приложения
-		return str_replace('\\', '/', $module_folder.$rel_path.'');
-	}
+	}		
 	
 	/**
 	 * Преобразовать коллекцию полученного кода в виде NS/Files в строку
@@ -607,26 +461,32 @@ class Compressor
 		// Соберем весь PHP код модуля
 		$php_code = '';
 		foreach ( $code as $ns => $files ) 
-		{
-			if( !$no_ns )$php_code .= "\n".'namespace '.$ns.'{';
-			
+		{	
+			if( !$no_ns )$php_code .= "\n".'namespace '.$ns.'{';			
 			
 			// Сначала вставим use 
-			if( !$no_ns ) foreach ( $files['uses'] as $use ) 
-			{
+			if( !$no_ns ) foreach ( array_unique($files['uses']) as $use ) 
+			{				
 				$php_code .= "\n".'use '.$use.';';
 			}		
 			
 			// Вставим код файлов
 			foreach ( $files as $file => $php ) 
-			{
+			{					
 				if( $file == 'uses' ) continue;
 								
 				$php_code .= $php; 
 			}
 			
 			if( !$no_ns ) $php_code .= "\n".'}';
-		}
+			
+			// Crear all namespace classnames, ommitting global namespace
+			if( $no_ns && $ns != self::NS_GLOBAL ) 
+			{
+				elapsed('Clearing namespace: '.$ns);
+				$php = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php );
+			}
+		}		
 		
 		return $php_code;
 	}
@@ -640,9 +500,12 @@ class Compressor
 
 			// Запишем содержание NS/Files
 			foreach ( $files as $file => $php ) 
-			{ 
+			{ 				
 				if( isset( $target[ $ns ][ $file ] ) && is_string($php)) $target[ $ns ][ $file ] .= $php;
-				else if ( isset( $target[ $ns ][ $file ] ) && is_array( $php ) ) $target[ $ns ][ $file ] = array_unique(array_merge( $target[ $ns ][ $file ], $php ));
+				else if ( isset( $target[ $ns ][ $file ] ) && is_array( $php ) ) 
+				{
+					$target[ $ns ][ $file ] = array_unique(array_merge( $target[ $ns ][ $file ], $php ));
+				}
 				else $target[ $ns ][ $file ] = $php;
 			}
 		}
@@ -656,16 +519,14 @@ class Compressor
 	// TODO: Довести до ума разпознование require - убрать точку с зяпятоц которая остается
 	// TODO: Убрать пустые линии
 	// TODO: Анализатор использования функция и переменных??
-	public function compress_php( $_path, $module = NULL, & $code = array(), $namespace = self::NS_GLOBAL )
+	public function compress_php( $path, $module = NULL, & $code = array(), $namespace = self::NS_GLOBAL )
 	{				
-		// Получим реальный путь к файлу
-		$path = realpath( $_path );		
-		
 		//trace(' + Вошли в функцию:'.$path.'('.$namespace.')');
+		$path = normalizepath(realpath($path));
 	
 		// Если мы уже подключили данный файл или он не существует
-		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$_path.', уже собран' );
-		else if( !is_file($path) )				return elapsed('    ! Файл: '.$_path.', не существует' );		
+		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$path.', уже собран' );
+		else if( !is_file($path) )				return elapsed('    ! Файл: '.$path.', не существует' );		
 	
 		elapsed('  -- Собираю PHP код из файла: '.$path );
 	
@@ -683,7 +544,7 @@ class Compressor
 		// Если в файле нет namespace - считаем его глобальным 
 		if( strpos( $fileStr, 'namespace' ) === false )
 		
-			$file_dir = '';
+		$file_dir = '';
 		// Вырежим путь к файлу
 		$file_dir = (pathinfo( $path, PATHINFO_DIRNAME ) == '.' ? '' : pathinfo( $path, PATHINFO_DIRNAME ).'/');
 	
@@ -777,7 +638,7 @@ class Compressor
 								// Преведем все use к одному виду
 								if( $_use{0} !== '\\') $_use = '\\'.$_use;
 								
-								$uses[] = $_use;
+								$uses[] = $_use;							
 							}
 						}
 						else $main_code .= ' use ';
@@ -821,7 +682,7 @@ class Compressor
 						if( $namespace !== $_namespace ) 
 						{ 		
 							// Сохраним новый как текущий
-							$namespace = $_namespace;
+							$namespace = strtolower($_namespace);
 							
 							//trace('               #'.$i.' -> Изменили NS с '.$namespace.' на '.$_namespace);
 
@@ -881,7 +742,7 @@ class Compressor
 							$file_path = str_replace(array("'",'"'), array('',''), $file_path );
 									
 							// Если это не абсолютный путь - попробуем относительный
-							if( !file_exists( $file_path ) ) $file_path = $file_dir . $file_path;
+							if( !file_exists( $file_path ) ) $file_path = pathname($path).$file_path;						
 									
 							// Если файл найден - получим его содержимое
 							if( file_exists( $file_path ) )
@@ -931,9 +792,11 @@ class Compressor
 				
 			if( $ns != '')
 			{
+				$ns = strtolower($ns);
+				
 				if( !isset( $classes[ $ns ]) ) $classes[ $ns ] = array();
 					
-				$classes[ $ns ][ $ac->getFileName() ] = '';
+				$classes[ $ns ][ normalizepath($ac->getFileName()) ] = '';
 			}
 		}
 	}
