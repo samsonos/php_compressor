@@ -350,16 +350,19 @@ class Compressor extends ExternalModule
 	 * @param boolean $no_errors 	Disable errors output
 	 *
 	 */
-	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = true  )
+	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = false  )
 	{	
 		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
 		
 		// Get realpath to web application
 		$realpath = s()->path();
-			
-		// Define rendering model depending on PHP version
-		if( version_compare( $php_version, '5.3.0', '>' ) ) $this->view_mode = Core::RENDER_ARRAY;
+		
+		// !!!BUG!!!
+		if( !isset($php_version) ) $php_version = PHP_VERSION;		
 				
+		// Define rendering model depending on PHP version
+		if( version_compare( $php_version, '5.3.0', '<' ) ) $this->view_mode = Core::RENDER_ARRAY;
+						
 		// Создадим папку для свернутого сайта
 		if( !file_exists($this->output)) mkdir( $this->output, 0775, true );	
 
@@ -403,7 +406,7 @@ class Compressor extends ExternalModule
 		}		
 		
 		// Set errors output
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'true':'false').';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'false':'true').';';
 
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core()).'\';';
