@@ -108,6 +108,9 @@ class Compressor extends ExternalModule
 			// Full path to output file
 			$dst = $this->output.$view_php;
 			
+			// Modify source file anyway
+			touch($view_file);
+			
 			// Copy view file
 			$this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html){
 				// Write new view content
@@ -145,29 +148,7 @@ class Compressor extends ExternalModule
 		// Call special method enabling module personal resource pre-management on compressing
 		if( $module->beforeCompress( $this, $this->php ) !== false )
 		{
-			// Iterate module resources
-			foreach ( $data['resources'] as $extension => $resources )
-			{
-				// Iterate only allowed resource types
-				if( !in_array( $extension , $this->ignored_extensions ) ) foreach ( $resources as $resource )
-				{
-					// Get only filename
-					$filename = basename( $resource );
-						
-					// Copy only allowed resources
-					if( !in_array( $filename, $this->ignored_resources ) )
-					{
-						// Build relative module resource path
-						$relative_path = str_replace( $module_path, '', $resource );
-		
-						// Build correct destination folder
-						$dst = $this->output.$module_output_path.$relative_path;
-							
-						// Copy/update file if nessesary
-						$this->copy_resource( $resource, $dst );
-					}
-				}
-			}
+			$this->copy_path_resources( $data['resources'], $module_path, $module_output_path );
 		
 			// Internal collection of module php code, not views
 			$module_php = array();
@@ -422,7 +403,7 @@ class Compressor extends ExternalModule
 		
 		// Set errors output
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'false':'true').';';
-
+	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core()).'\';';
 								
@@ -432,6 +413,15 @@ class Compressor extends ExternalModule
 			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
 		}
 		else e('Default module definition not found - possible errors at compressed version');
+		
+		// If this is remote web-app
+		if( __SAMSON_REMOTE_APP )
+		{
+			$path = __SAMSON_CWD__;
+			s()->resources( $path, $ls );
+			
+			$this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
+		}
 		
 		// Clear default entry point
 		$this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ] = '';
@@ -804,19 +794,37 @@ class Compressor extends ExternalModule
 	}
 	
 	/**
-	 * Define action to do with resource
-	 * @param string $src source file
-	 * @param string $dst destination file
-	 * @return string Action to perform
+	 * Copy resources	
 	 */
-	private function CreateOrUpdate( $src, $dst )
+	private function copy_path_resources( $path_resources, $module_path, $module_output_path )
 	{
-		// If destination file does not exists
-		if( !file_exists( $dst ) ) return 'Creating';
-		// If source file has been changed
-		else if( filemtime( $src ) <> filemtime( $dst ) ) return 'Updating';
-		// Resource is up to date
-		else return 'NoAction';
+		elapsed(' -> Copying resources from '.$module_path.' to '.$module_output_path );
+		
+		// Iterate module resources
+		foreach ( $path_resources as $extension => $resources )
+		{
+			// Iterate only allowed resource types
+			if( !in_array( $extension , $this->ignored_extensions ) ) foreach ( $resources as $resource )
+			{
+				// Get only filename
+				$filename = basename( $resource );
+		
+				// Copy only allowed resources
+				if( !in_array( $filename, $this->ignored_resources ) )
+				{
+					// Build relative module resource path
+					$relative_path = str_replace( $module_path, '', $resource );
+		
+					// Build correct destination folder
+					$dst = $this->output.$module_output_path.$relative_path;
+					
+					//trace($resource.'-'.$dst);
+						
+					// Copy/update file if nessesary
+					$this->copy_resource( $resource, $dst );
+				}
+			}
+		}
 	}
 	
 	/**
