@@ -491,15 +491,16 @@ class Compressor extends ExternalModule
 				$php_code .= $php; 
 			}
 			
-			if( !$no_ns ) $php_code .= "\n".'}';
+			if( !$no_ns ) $php_code .= "\n".'}';	
+		}	
+
+		// Crear all namespace classnames, ommitting global namespace
+		if( $no_ns) foreach ( $code as $ns => $files ) if( $ns != self::NS_GLOBAL )
+		{
+			elapsed('Clearing namespace: '.$ns);
 			
-			// Crear all namespace classnames, ommitting global namespace
-			if( $no_ns && $ns != self::NS_GLOBAL ) 
-			{
-				elapsed('Clearing namespace: '.$ns);
-				$php = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php );
-			}
-		}		
+			$php_code = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php_code );
+		}
 		
 		return $php_code;
 	}
