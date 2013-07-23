@@ -73,8 +73,7 @@ class Compressor extends ExternalModule
 	 */
 	public function compress_view( $view_file, iModule & $module )
 	{	
-		// Build relative path to module view
-		$out_rel_path  = str_replace( __SAMSON_VIEW_PATH, '', ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file));
+		// Build relative path to module view		
 		$rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
 		
 		elapsed('  -- Preparing view: '.$view_file.'('.$rel_path.')' );
@@ -101,7 +100,23 @@ class Compressor extends ExternalModule
 		$view_html = s()->generate_template( $view_html );
 		
 		// If rendering from array
-		if( $this->view_mode == Core::RENDER_ARRAY ) $view_php = '\''.$out_rel_path.'\';'; 		
+		if( $this->view_mode == Core::RENDER_ARRAY )
+		{
+			// Build ouptput view path
+			$view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
+			
+			// Full path to output file
+			$dst = $this->output.$view_php;
+			
+			// Copy view file
+			$this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html){
+				// Write new view content
+				file_put_contents( $dst, $view_html );
+			});			
+			
+			// Prepare view array value
+			$view_php = '\''.$view_php.'\';'; 		
+		}
 		// If rendering from variables is selected
 		else if( $this->view_mode == Core::RENDER_VARIABLE ) $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;"; 		
 	
@@ -786,6 +801,22 @@ class Compressor extends ExternalModule
 		
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
+	}
+	
+	/**
+	 * Define action to do with resource
+	 * @param string $src source file
+	 * @param string $dst destination file
+	 * @return string Action to perform
+	 */
+	private function CreateOrUpdate( $src, $dst )
+	{
+		// If destination file does not exists
+		if( !file_exists( $dst ) ) return 'Creating';
+		// If source file has been changed
+		else if( filemtime( $src ) <> filemtime( $dst ) ) return 'Updating';
+		// Resource is up to date
+		else return 'NoAction';
 	}
 	
 	/**
