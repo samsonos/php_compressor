@@ -53,19 +53,7 @@ class Compressor extends ExternalModule
 		
 	/** Collection for storing all php code by namespace */
 	protected $php = array( self::NS_GLOBAL => array() );
-		
-	/** @see \samson\core\ExternalModule::prepare() */
-	public function prepare()
-	{
-		// If output path not specified - set to final.HTTP_HOST/WEB_APP
-		if( !isset($this->output))
-		{
-			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
-		}
-		
-		return parent::prepare();
-	}
-	
+
 	/**
 	 * Свернуть файл представления
 	 * @param string 	$view_file 	Полный путь к файлу представления
@@ -363,6 +351,12 @@ class Compressor extends ExternalModule
 		
 		// Get realpath to web application
 		$realpath = s()->path();
+		
+		// If no output path specified 
+		if( !isset($this->output) )
+		{
+			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
+		}
 		
 		// !!!BUG!!!
 		if( !isset($php_version) ) $php_version = PHP_VERSION;		
