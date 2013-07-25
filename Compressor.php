@@ -258,20 +258,31 @@ class Compressor extends ExternalModule
 	/** Prepare core serialized string only with nessesar and correct data	*/	
 	public function compress_core()
 	{
+		// Load production configuration
+		Config::load( ConfigType::PRODUCTION );
+		
 		// Unload all modules from core that does not implement interface iModuleCompressable
-		foreach ( s()->module_stack as $id => $m ) 
+		foreach ( s()->module_stack as $id => & $m ) 
 		{
 			if ( !( is_a( $m, ns_classname( 'iModuleCompressable', 'samson\core')))) 
 			{					
 				s()->unload( $id );
 			}
+			else
+			{
+				// If module configuration loaded - set module params
+				if( isset( Config::$data[ $id ] ) ) 
+				{
+					elapsed(' -- '.$id.' -> Loading config data');
+					
+					// Assisgn only own class properties no view data set anymore
+					foreach ( Config::$data[ $id ] as $k => $v) if( property_exists( get_class($m), $k ))	$m->$k = $v;				
+				}				
+			}
 		}
 		
 		// Set core rendering model
-		s()->render_mode = $this->view_mode;		
-		
-		// Load production configuration
-		Config::load( ConfigType::PRODUCTION );	
+		s()->render_mode = $this->view_mode;			
 		
 		// Change system path to relative type
 		s()->path('');
@@ -414,13 +425,14 @@ class Compressor extends ExternalModule
 		}
 		else e('Default module definition not found - possible errors at compressed version');
 		
-		// If this is remote web-app
+		// If this is remote web-app - collect local resources
 		if( __SAMSON_REMOTE_APP )
 		{
 			$path = __SAMSON_CWD__;
 			s()->resources( $path, $ls );
 			
-			$this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
+			// If we have any resources
+			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
 		}
 		
 		// Clear default entry point
