@@ -346,9 +346,7 @@ class Compressor extends ExternalModule
 	 *
 	 */
 	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = false  )
-	{	
-		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
-		
+	{			
 		// Get realpath to web application
 		$realpath = s()->path();
 		
@@ -357,6 +355,8 @@ class Compressor extends ExternalModule
 		{
 			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
 		}
+		
+		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
 		
 		// !!!BUG!!!
 		if( !isset($php_version) ) $php_version = PHP_VERSION;		
@@ -371,10 +371,10 @@ class Compressor extends ExternalModule
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
 		
 		// Iterate core ns resources collection
-		foreach ( s()->load_stack as $ns => & $data )
+		foreach ( s()->load_module_stack as $id => & $data )
 		{	
 			// Get module instance				
-			$module = & s()->module_stack[ $data['id'] ];		
+			$module = & s()->module_stack[ $id ];		
 			
 			// Work only with copressable modules
 			if ( is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core')))
@@ -798,6 +798,9 @@ class Compressor extends ExternalModule
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
 	}
+	
+	/** Constructor */
+	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
 	
 	/**
 	 * Copy resources	
