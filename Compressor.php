@@ -330,10 +330,10 @@ class Compressor extends ExternalModule
 			// If file handler specified 
 			if( is_callable($handler) ) call_user_func( $handler, $src, $dst, $action );
 			// Copy file
-			else copy( $src, $dst );
-				
+			else copy( $src, $dst );				
+
 			// Sync source file with copied file
-			touch( $src );		
+			touch( $dst, filemtime( $src ) );
 		}
 	}
 	
