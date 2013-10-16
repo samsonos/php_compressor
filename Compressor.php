@@ -491,7 +491,7 @@ class Compressor extends ExternalModule
 			// Сначала вставим use 
 			if( !$no_ns ) foreach ( array_unique($files['uses']) as $use ) 
 			{				
-				$php_code .= "\n".'use '.$use.';';
+				//$php_code .= "\n".'use '.$use.';';
 			}		
 			
 			// Вставим код файлов
@@ -784,7 +784,7 @@ class Compressor extends ExternalModule
 						else $main_code .= $text;
 						
 					}
-					break;
+					break;				
 		
 					// Собираем основной код программы
 					default: $main_code .= $text; break;
@@ -794,6 +794,9 @@ class Compressor extends ExternalModule
 		
 		//trace(' - Вышли из функции:'.$path.'('.$namespace.')');
 		//trace('');			
+		
+		// Replace all class shortcut usage with full name
+		if( sizeof($uses) )	$main_code = $this->removeUSEStatement( $main_code, $uses );		
 		
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
@@ -834,6 +837,41 @@ class Compressor extends ExternalModule
 				}
 			}
 		}
+	}
+	
+	/**
+	 * Remove all USE statements and replace class shortcuts to full class names
+	 * @param string 	$code 		Code to work with
+	 * @param array 	$classes	Array of class names to replace
+	 */
+	private function removeUSEStatement( $code, array $classes )
+	{			
+		// Iterate found use statements
+		foreach ( array_unique($classes) as $full_class )
+		{
+			// Get class shortcut
+			$class_name = classname($full_class);		
+			
+			// Check class existance
+			if( !class_exists($full_class) && !interface_exists($full_class) ) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class );
+			
+			// Replace class static call	
+			$code = preg_replace( '/([^\\\a-z])'.$class_name.'::/i', '$1'.$full_class.'::', $code );
+			
+			// Replace class implements calls			
+			$code = preg_replace( '/implements\s+(.*)'.$class_name.'/i', 'implements $1'.$full_class.' ', $code );
+			
+			// Replace class extends calls
+			$code = preg_replace( '/extends\s+'.$class_name.'/i', 'extends '.$full_class.'', $code );
+			
+			// Replace class hint calls
+			$code = preg_replace( '/'.$class_name.'\s*(&|$)/i', $full_class.' $2', $code );
+
+			// Replace class creation call
+			$code = preg_replace( '/new\s+'.$class_name.'\s*\(/i', 'new '.$full_class.'(', $code );
+		}
+		
+		return $code;
 	}
 	
 	/**
