@@ -13,7 +13,7 @@ use samson\core\ConfigType;
  *
  * @package SamsonPHP
  * @author Vitaly Iegorov <vitalyiegorov@gmail.com>
- * @version 0.5
+ * @version 1.0
  */
 // TODO: Интегрировать обратку представлений внутри шаблона а не дублировать одинаковый код
 // TODO: Анализатор классов которые добавляются, а вдруг они вообще не нужны?
@@ -34,7 +34,7 @@ class Compressor extends ExternalModule
 	public $output;
 	
 	/** Ignored resource extensions */
-	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs' );
+	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' );
 	
 	/** Ignored resource files */
 	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore' );
@@ -244,7 +244,7 @@ class Compressor extends ExternalModule
 	}
 	
 	/** Prepare core serialized string only with nessesar and correct data	*/	
-	public function compress_core()
+	public function compress_core( $no_ns = false )
 	{
 		// Load production configuration
 		Config::load( ConfigType::PRODUCTION );
@@ -278,19 +278,35 @@ class Compressor extends ExternalModule
 		// Create serialized copy
 		$core_code = serialize(s());
 		
-		// Find all class description in serialized core string
-		if( ($this->view_mode == Core::RENDER_ARRAY) && preg_match_all('/O:(?<length>\d+):\"(?<class>[^\"]+)\"/', $core_code, $matches ))
+		// If no namespaces 
+		if( $no_ns )
 		{
-			// Remove namespaces in class definition
-			for ( $i = 0; $i < sizeof($matches[0]); $i++ )
+			if( preg_match_all('/O:\d+:\"(?<classname>[^\"]+)\"/i', $core_code, $matches))
 			{
-				// Generate correct class name without namespaces
-				$class = ns_classname( classname($matches[ 'class' ][ $i ]), nsname(classname($matches[ 'class' ][ $i ])));
-		
-				// Change class description in serialized string
-				$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
+				for ($i = 0; $i < sizeof($matches[0]); $i++) 
+				{
+					$source = $matches[0][$i];
+					
+					$classname = $matches['classname'][$i];
+					
+					$core_code = $this->transformClassName( $source, $classname, $core_code, nsname($classname) );					
+				}
 			}
-		}		
+		}
+		
+// 		// Find all class description in serialized core string
+// 		if( ($this->view_mode == Core::RENDER_ARRAY) && preg_match_all('/O:(?<length>\d+):\"(?<class>[^\"]+)\"/', $core_code, $matches ))
+// 		{
+// 			// Remove namespaces in class definition
+// 			for ( $i = 0; $i < sizeof($matches[0]); $i++ )
+// 			{
+// 				// Generate correct class name without namespaces
+// 				$class = ns_classname( classname($matches[ 'class' ][ $i ]), nsname(classname($matches[ 'class' ][ $i ])));
+		
+// 				// Change class description in serialized string
+// 				$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
+// 			}
+// 		}		
 	
 		return $core_code;
 	}	
@@ -400,17 +416,22 @@ class Compressor extends ExternalModule
 			$rr = & s()->module_stack['resourcer'];
 						
 			// Copy cached js resource
-			$this->copy_resource( $realpath.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
+			$this->copy_resource( __SAMSON_CWD__.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
 			
 			// Copy cached css resource
-			$this->copy_resource( $realpath.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
+			$this->copy_resource( __SAMSON_CWD__.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
 		}		
 		
 		// Set errors output
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'false':'true').';';
 	
 		// Add global base64 serialized core string
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core()).'\';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
+		
+		// Add localization data 
+		$locale_str = array();
+		foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
 								
 		// Remove standart framework entry point from index.php	- just preserve default controller	
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
@@ -461,6 +482,12 @@ class Compressor extends ExternalModule
 		
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );		
+		
+		// Remove url_base parsing ant put current url base 
+		if( preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches ))
+		{
+			$index_php = str_replace($matches[0], 'define(\'__SAMSON_BASE__\',\''.__SAMSON_BASE__.'\');', $index_php);			
+		}			
 				
 		// Запишем пусковой файл
 		file_put_contents( $this->output.'index.php', '<?php '.$index_php."\n".'?>' );		
@@ -485,33 +512,95 @@ class Compressor extends ExternalModule
 		// Соберем весь PHP код модуля
 		$php_code = '';
 		foreach ( $code as $ns => $files ) 
-		{	
-			if( !$no_ns )$php_code .= "\n".'namespace '.$ns.'{';			
+		{				
+			// If we support namespaces 
+			if( !$no_ns ) $php_code .= "\n".'namespace '.$ns.'{';			
 			
-			// Сначала вставим use 
-			if( !$no_ns ) foreach ( array_unique($files['uses']) as $use ) 
-			{				
-				//$php_code .= "\n".'use '.$use.';';
-			}		
-			
-			// Вставим код файлов
+			// Insert files code
 			foreach ( $files as $file => $php ) 
-			{					
+			{				
+				// Ignore uses array	
 				if( $file == 'uses' ) continue;
-								
-				$php_code .= $php; 
+				
+				// If we does not support namespaces
+				if( $no_ns )
+ 				{ 				
+ 					trace();
+ 					trace($file); 	
+ 					// Find all static class usage
+ 					if( preg_match_all( '/[\!\.\,\(\s\n\=\:]+\s*(?:self|parent|static|(?<classname>[\\\a-z_0-9]+))::/i', $php, $matches ))
+ 					{ 	
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 											
+ 					}
+ 					
+ 					// Find all class definition 
+ 					if( preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches ))
+ 					{ 						
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 					}
+ 					
+ 					// Find all instanceof definition
+ 					if( preg_match_all( '/\s+instanceof\s+(?<classname>[\\\a-z_0-9]+)/i', $php, $matches ))
+ 					{
+ 						$php = $this->changeClassName( $matches, $php, $ns );
+ 					}
+ 					 					
+ 					// Find all interface definition
+ 					if( preg_match_all( '/(\n|\s)\s*interface\s+(?<classname>[^\s]+)/i', $php, $matches ))
+ 					{
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 						 
+ 					}
+ 					
+ 					// Find all class implements
+ 					if( preg_match_all( '/\s+implements\s+(?<classes>.*)/i', $php, $matches ))
+ 					{ 	
+ 						$replace = $matches[0][0];
+ 						foreach ( explode(',', $matches['classes'][0]) as $classname ) 
+ 						{ 							
+ 							$replace = $this->transformClassName( $classname, $classname, $replace, $ns );
+ 						}  	
+
+ 						$php = str_replace($matches[0][0], $replace, $php);
+ 					}
+ 					
+ 					// Find all class extends
+ 					if( preg_match_all( '/\s+extends\s+(?<classname>[^\s]+)/i', $php, $matches ))
+ 					{
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 							 				
+ 					}
+ 					
+ 					// Find all class creation
+ 					if( preg_match_all( '/[\.\,\(\s\n=:]+\s*new\s+(?<classname>[^\(]+)\s*\(/i', $php, $matches ))
+ 					{
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 					}
+ 					
+ 					// Find all class hints
+ 					if( preg_match_all( '/(\(|\,)\s*(?:array|(?<classname>[\\\a-z_0-9]+))\s*(\&|\$)/i', $php, $matches ))
+ 					{ 						
+ 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 					} 		
+ 					
+ 					// Replace special word with its value
+ 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php ); 					
+ 					
+					$php_code .= $php;
+				}
+				// Just concat file code
+				else $php_code .= $php; 
 			}
 			
+			// Close namespace if we support
 			if( !$no_ns ) $php_code .= "\n".'}';	
 		}	
 
-		// Crear all namespace classnames, ommitting global namespace
-		if( $no_ns) foreach ( $code as $ns => $files ) if( $ns != self::NS_GLOBAL )
-		{
-			elapsed('Clearing namespace: '.$ns);
+// 		// Crear all namespace classnames, ommitting global namespace
+// 		if( $no_ns) foreach ( $code as $ns => $files ) if( $ns != self::NS_GLOBAL )
+// 		{
+// 			elapsed('Clearing namespace: '.$ns);
 			
-			$php_code = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php_code );
-		}
+// 			$php_code = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php_code );
+// 		}
 		
 		return $php_code;
 	}
@@ -580,7 +669,10 @@ class Compressor extends ExternalModule
 		if( !isset($code[ $namespace ][ 'uses' ] ) ) $code[ $namespace ][ 'uses' ] = array();
 		
 		// Установим ссылку на коллекцию алиасов
-		$uses = & $code[ $namespace ][ 'uses' ];		
+		$uses = & $code[ $namespace ][ 'uses' ];
+		
+		// Local file uses collection	
+		$file_uses = array();	
 	
 		// Получим константы документа
 		$consts = get_defined_constants();
@@ -655,15 +747,20 @@ class Compressor extends ExternalModule
 						if( $id !== '(' ) 
 						{			
 							// Нижний регистр
-							$_use = strtolower($_use);
+							//$_use = strtolower($_use);
+							
+							// Преведем все use к одному виду
+							if( $_use{0} !== '\\') $_use = '\\'.$_use;
+							
+							// Add local file uses
+							$file_uses[] = $_use;
 							
 							// TODO: Вывести замечание что бы код везде был одинаковый
 							if( !in_array( $_use, $uses ) )
 							{								
-								// Преведем все use к одному виду
-								if( $_use{0} !== '\\') $_use = '\\'.$_use;
 								
-								$uses[] = $_use;							
+								
+								$uses[] = $_use;									
 							}
 						}
 						else $main_code .= ' use ';
@@ -796,7 +893,7 @@ class Compressor extends ExternalModule
 		//trace('');			
 		
 		// Replace all class shortcut usage with full name
-		if( sizeof($uses) )	$main_code = $this->removeUSEStatement( $main_code, $uses );		
+		if( sizeof($file_uses) ) $main_code = $this->removeUSEStatement( $main_code, $file_uses );		
 		
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
@@ -804,6 +901,73 @@ class Compressor extends ExternalModule
 	
 	/** Constructor */
 	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
+	
+	private function transformClassName( $source, $classname, $php, $ns )
+	{		
+		// Create old-styled namespace format
+		$old_ns = ( $ns != '') ? str_replace( '\\', '_', $ns ).'_' : $ns;		
+		
+		// Create classname replacement
+		$newclassname = $old_ns.$classname;
+			
+		// Try to get namespace from class name
+		$namespace = nsname( $classname );	
+			
+		// If this class uses other namespace
+		if( isset($namespace{0}) || $classname{0} == '\\')
+		{
+			// Transform namespsace
+			$old_ns = trim(str_replace( '\\', '_', $namespace ).'_');		
+					
+			// Remove first '_' if left from transforming
+			if( $old_ns{0} == '_') $old_ns = substr( $old_ns, 1);
+			
+			// If this is global NS - remove namespace
+			if( $old_ns == '_' ) $old_ns = '';
+		
+			// Get only class name
+			$newclassname = $old_ns.classname( $classname );
+			
+			trace('Changing namespace:"'.$namespace.'" to "'.$old_ns.'"');
+		}		
+			
+		// Replace classname in source
+		$replace = str_replace( $classname, $newclassname, $source);
+
+		trace('Changing classname"'.htmlentities(trim($classname)).'" with "'.htmlentities(trim($newclassname)).'"');
+		trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
+			
+		// Replace code
+		$php = str_ireplace( $source, $replace, $php );
+	
+		
+		return $php;
+	}
+	
+	/** Change classname to old format without namespace */
+	private function changeClassName( $matches, $php, $ns )
+	{
+		// Iterate all classname usage matches 
+		for ($i = 0; $i < sizeof($matches[0]); $i++) 
+		{
+			// Get source matching string 
+			$source = $matches[0][$i];
+			
+			// Get found classname
+			$classname = & $matches['classname'][$i];
+			
+			// If classname found
+			if( !isset($classname) || !isset($classname{0}) ) continue;
+				
+			// If this is variable
+			if( strpos( $classname, '$') !== false ) continue;
+			
+			// Transform class name
+			$php = $this->transformClassName( $source, $classname, $php, $ns );			
+		}		
+		
+		return $php;
+	}
 	
 	/**
 	 * Copy resources	
@@ -845,12 +1009,13 @@ class Compressor extends ExternalModule
 	 * @param array 	$classes	Array of class names to replace
 	 */
 	private function removeUSEStatement( $code, array $classes )
-	{			
+	{				
+		//elapsed($classes);
 		// Iterate found use statements
 		foreach ( array_unique($classes) as $full_class )
 		{
 			// Get class shortcut
-			$class_name = classname($full_class);		
+			$class_name = classname($full_class);				
 			
 			// Check class existance
 			if( !class_exists($full_class) && !interface_exists($full_class) ) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class );
@@ -865,7 +1030,7 @@ class Compressor extends ExternalModule
 			$code = preg_replace( '/extends\s+'.$class_name.'/i', 'extends '.$full_class.'', $code );
 			
 			// Replace class hint calls
-			$code = preg_replace( '/'.$class_name.'\s*(&|$)/i', $full_class.' $2', $code );
+			$code = preg_replace( '/(\(|\s|\,)\s*'.$class_name.'\s*(&|$)/i', '$1'.$full_class.' $2', $code );
 
 			// Replace class creation call
 			$code = preg_replace( '/new\s+'.$class_name.'\s*\(/i', 'new '.$full_class.'(', $code );
