@@ -33,6 +33,9 @@ class Compressor extends ExternalModule
 	/** Output path for compressed web application */
 	public $output;
 	
+	/** Collection of requires to insert in compressed file */
+	public $require = array();
+	
 	/** Ignored resource extensions */
 	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' );
 	
@@ -435,7 +438,10 @@ class Compressor extends ExternalModule
 		$locale_str = array();
 		foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
-								
+
+		// Add all specified requires
+		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';
+		
 		// Remove standart framework entry point from index.php	- just preserve default controller	
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
 		{
