@@ -94,13 +94,11 @@ class Compressor extends ExternalModule
 			$view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
 			
 			// Full path to output file
-			$dst = $this->output.$view_php;
-			
-			// Modify source file anyway
-			touch($view_file);
+			$dst = $this->output.$view_php;			
 			
 			// Copy view file
-			$this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html){
+			$this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file)
+			{
 				// Write new view content
 				file_put_contents( $dst, $view_html );
 			});			
@@ -347,9 +345,14 @@ class Compressor extends ExternalModule
 			if( is_callable($handler) ) call_user_func( $handler, $src, $dst, $action );
 			// Copy file
 			else copy( $src, $dst );				
-
+			
 			// Sync source file with copied file
-			touch( $dst, filemtime( $src ) );
+			// Change file permission
+			chmod( $dst, 0775 );
+			
+			// Modify source file anyway
+			touch( $dst, filemtime($src) );
+			//touch( $src );
 		}
 	}
 	
@@ -525,8 +528,8 @@ class Compressor extends ExternalModule
 				// If we does not support namespaces
 				if( $no_ns )
  				{ 				
- 					trace();
- 					trace($file); 	
+ 					//trace();
+ 					//trace($file); 	
  					// Find all static class usage
  					if( preg_match_all( '/[\!\.\,\(\s\n\=\:]+\s*(?:self|parent|static|(?<classname>[\\\a-z_0-9]+))::/i', $php, $matches ))
  					{ 	
@@ -902,6 +905,7 @@ class Compressor extends ExternalModule
 	/** Constructor */
 	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
 	
+	/** Transfrom classname with namespace to PHP 5.2 format */
 	private function transformClassName( $source, $classname, $php, $ns )
 	{		
 		// Create old-styled namespace format
@@ -928,14 +932,14 @@ class Compressor extends ExternalModule
 			// Get only class name
 			$newclassname = $old_ns.classname( $classname );
 			
-			trace('Changing namespace:"'.$namespace.'" to "'.$old_ns.'"');
+			//trace('Changing namespace:"'.$namespace.'" to "'.$old_ns.'"');
 		}		
 			
 		// Replace classname in source
 		$replace = str_replace( $classname, $newclassname, $source);
 
-		trace('Changing classname"'.htmlentities(trim($classname)).'" with "'.htmlentities(trim($newclassname)).'"');
-		trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
+		//trace('Changing classname"'.htmlentities(trim($classname)).'" with "'.htmlentities(trim($newclassname)).'"');
+		//trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
 			
 		// Replace code
 		$php = str_ireplace( $source, $replace, $php );
