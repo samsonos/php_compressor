@@ -137,25 +137,35 @@ attorneys' fees and costs incurred in connection with such action, including
 any appeal of such action. This section shall survive the termination of this
 License.
 
-13) Miscellaneous. If any provision of this License is held to be
-unenforceable, such provision shall be reformed only to the extent necessary
-to make it enforceable.
-
-14) Definition of "You" in This License. "You" throughout this License,
-whether in upper or lower case, means an individual or a legal entity
-exercising rights under, and complying with all of the terms of, this License.
-For legal entities, "You" includes any entity that controls, is controlled by,
-or is under common control with you. For purposes of this definition,
-"control" means (i) the power, direct or indirect, to cause the direction or
-management of such entity, whether by contract or otherwise, or (ii) ownership
-of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial
-ownership of such entity.
-
-15) Right to Use. You may use the Original Work in all ways not otherwise
-restricted or conditioned by this License or by law, and Licensor promises not
-to interfere with or be responsible for such uses by You.
-
-16) Modification of This License. This License is Copyright Â© 2005 Lawrence
+13) Miscellaneous. If any provision of this Lice<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>SamsonJS</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.wst.validation.validationbuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.dltk.core.scriptbuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.wst.jsdt.core.javascriptValidator</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.wst.jsdt.core.jsNature</nature>
+		<nature>org.eclipse.php.core.PHPNature</nature>
+	</natures>
+</projectDescription>
+                                                                                                                                                                                                                                                                                                                              © 2005 Lawrence
 Rosen. Permission is granted to copy, distribute, or communicate this License
 without modification. Nothing in this License permits You to modify this
 License as applied to the Original Work or to Derivative Works. However, You
