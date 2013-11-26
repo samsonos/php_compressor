@@ -40,7 +40,7 @@ class Compressor extends ExternalModule
 	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' );
 	
 	/** Ignored resource files */
-	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore' );
+	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore', );
 	
 	/** Папка где размещается исходное веб-приложение */
 	public $input = __SAMSON_CWD__;
@@ -375,8 +375,11 @@ class Compressor extends ExternalModule
 		// If no output path specified 
 		if( !isset($this->output) )
 		{
-			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']).url()->base();
+			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']);
 		}
+
+        // Add url base to path
+        $this->output .= url()->base();
 		
 		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
 		
