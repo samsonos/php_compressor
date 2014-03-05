@@ -57,6 +57,16 @@ class Compressor extends ExternalModule
 	/** Collection for storing all php code by namespace */
 	protected $php = array( self::NS_GLOBAL => array() );
 
+    /**
+     * Universal controller
+     */
+    public function __HANDLER($phpVersion = null, $hideErrors = true)
+    {
+       s()->async(true);
+
+       $this->compress( $phpVersion, true, $hideErrors );
+    }
+
 	/**
 	 * Свернуть файл представления
 	 * @param string 	$view_file 	Полный путь к файлу представления
@@ -403,7 +413,7 @@ class Compressor extends ExternalModule
 			
 			// Work only with copressable modules
 			if ( is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core')))
-			{						
+			{
 				$this->compress_module( $module, $data );					
 			}		
 		}
@@ -473,8 +483,8 @@ class Compressor extends ExternalModule
 		// Set view data to the end of global namespace
 		$s = $this->php[ self::NS_GLOBAL ][ self::VIEWS ];
 		unset( $this->php[ self::NS_GLOBAL ][ self::VIEWS ] );
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = $s;		
-		
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = $s;
+
 		// Исправим порядок следования файлов в модуле на правильный
 		// т.к. в PHP описание классов должно идти строго по порядку 
 		$classes = array();
