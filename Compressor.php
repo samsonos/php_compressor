@@ -448,9 +448,9 @@ class Compressor extends ExternalModule
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
 		
 		// Add localization data 
-		$locale_str = array();
+		/*$locale_str = array();
 		foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';*/
 
 		// Add all specified requires
 		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';
