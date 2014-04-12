@@ -446,14 +446,24 @@ class Compressor extends ExternalModule
 	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
-		
-		// Add localization data 
-		/*$locale_str = array();
-		foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';*/
 
 		// Add all specified requires
-		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';
+		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';		
+		
+		// If this is remote web-app - collect local resources
+		if( __SAMSON_REMOTE_APP )
+		{
+			$path = __SAMSON_CWD__;
+			s()->resources( $path, $ls );
+
+            // Add localization data
+            $locale_str = array();
+            foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
+            $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
+			
+			// If we have any resources
+			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
+		}
 		
 		// Remove standart framework entry point from index.php	- just preserve default controller	
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
@@ -461,16 +471,6 @@ class Compressor extends ExternalModule
 			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
 		}
 		else e('Default module definition not found - possible errors at compressed version');
-		
-		// If this is remote web-app - collect local resources
-		if( __SAMSON_REMOTE_APP )
-		{
-			$path = __SAMSON_CWD__;
-			s()->resources( $path, $ls );
-			
-			// If we have any resources
-			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
-		}
 		
 		// Clear default entry point
 		$this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ] = '';
