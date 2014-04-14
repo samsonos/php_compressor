@@ -56,6 +56,8 @@ class Compressor extends ExternalModule
 		
 	/** Collection for storing all php code by namespace */
 	protected $php = array( self::NS_GLOBAL => array() );
+	
+	public $requirements = array('resourcer');
 
     /**
      * Universal controller
