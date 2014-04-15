@@ -283,7 +283,7 @@ class Compressor extends ExternalModule
 		}
 		
 		// Set core rendering model
-		\samon\core\Core::$render_mode = $this->view_mode;
+		s()->render_mode = $this->view_mode;
 		
 		// Change system path to relative type
 		s()->path('');
