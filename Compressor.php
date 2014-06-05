@@ -460,8 +460,22 @@ class Compressor extends ExternalModule
 
             // Add localization data
             $locale_str = array();
-            foreach (\samson\core\SamsonLocale::$locales as $locale ) if( $locale != \samson\core\SamsonLocale::DEF ) $locale_str[] = '\''.$locale.'\'';
-            $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
+            foreach (\samson\core\SamsonLocale::$locales as $locale) {
+                if( $locale != '' ) $locale_str[] = '\''.$locale.'\'';
+
+                $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
+            }
+
+            // TODO: add generic handlers to modules to provide compressing logic for each module
+            // TODO: add generic constants namespace to put all constants defenition there - and put only defined constrat and redeclare them
+
+
+            // If default locale is defined
+            if (defined('DEFAULT_LOCALE')) {
+                // Add it to the beggining
+                $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
+            }
+
 			
 			// If we have any resources
 			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
@@ -691,7 +705,7 @@ class Compressor extends ExternalModule
 		
 		// Создадим уникальную коллекцию алиасов для NS
 		if( !isset($code[ $namespace ][ 'uses' ] ) ) $code[ $namespace ][ 'uses' ] = array();
-		
+
 		// Установим ссылку на коллекцию алиасов
 		$uses = & $code[ $namespace ][ 'uses' ];
 		
