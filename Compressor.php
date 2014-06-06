@@ -471,11 +471,12 @@ class Compressor extends ExternalModule
 
 
             // If default locale is defined
-            if (defined('DEFAULT_LOCALE')) {
-                // Add it to the beggining
-                $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
+            if (!defined('DEFAULT_LOCALE')) {
+                define('DEFAULT_LOCALE', 'ru');
             }
 
+            // Add it to the beggining
+            $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
 			
 			// If we have any resources
 			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
