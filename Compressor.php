@@ -469,18 +469,19 @@ class Compressor extends ExternalModule
             // TODO: add generic handlers to modules to provide compressing logic for each module
             // TODO: add generic constants namespace to put all constants defenition there - and put only defined constrat and redeclare them
 
-
-            // If default locale is defined
-            if (!defined('DEFAULT_LOCALE')) {
-                define('DEFAULT_LOCALE', 'ru');
-            }
-
-            // Add it to the beggining
-            $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
 			
 			// If we have any resources
 			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
 		}
+
+        // If default locale is defined
+        if (!defined('DEFAULT_LOCALE')) {
+            define('DEFAULT_LOCALE', 'ru');
+        }
+
+        // Add it to the beggining
+        $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
+
 		
 		// Remove standart framework entry point from index.php	- just preserve default controller	
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
