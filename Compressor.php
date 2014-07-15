@@ -37,7 +37,7 @@ class Compressor extends ExternalModule
 	public $require = array();
 	
 	/** Ignored resource extensions */
-	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' );
+	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql' );
 	
 	/** Ignored resource files */
 	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore', );
