@@ -62,15 +62,18 @@ class Compressor extends ExternalModule
      */
     public function __HANDLER($phpVersion = null, $hideErrors = true)
     {
-       s()->async(true);
+        s()->async(true);
 
-       $this->compress( $phpVersion, true, $hideErrors );
+        $this->compress( $phpVersion, true, $hideErrors );
     }
 
     /**
      * Свернуть файл представления
-     * @param string 	$view_file 	Полный путь к файлу представления
-     * @param iModule 	$module		Указатель на модуль которому принадлежит это представление
+     *
+     * @param string  $view_file Полный путь к файлу представления
+     * @param iModule $module    Указатель на модуль которому принадлежит это представление
+     *
+     * @return bool
      */
     public function compress_view( $view_file, iModule & $module )
     {
@@ -132,7 +135,7 @@ class Compressor extends ExternalModule
      * @param iModule $module Указатель на модуль для сворачивания
      * @param array   $data
      */
-	public function compress_module( iModule & $module, array & $data )
+	public function compress_module(iModule & $module, array & $data)
 	{
 		// Идентификатор модуля
 		$id = $module->id();	
@@ -356,20 +359,22 @@ class Compressor extends ExternalModule
 			if( !file_exists( $dir_path )) 
 			{
 				elapsed( '  -- Creating folder structure '.$dir_path.' from '.$src );
-				mkdir( $dir_path, 0755, true );
+				mkdir( $dir_path, 0775, true );
 			}
 			
 			// If file handler specified 
-			if( is_callable($handler) ) call_user_func( $handler, $src, $dst, $action );
-			// Copy file
-			else copy( $src, $dst );				
+			if( is_callable($handler) ) {
+                call_user_func( $handler, $src, $dst, $action );
+            } else { // Copy file
+                copy($src, $dst);
+            }
 			
 			// Sync source file with copied file
 			if(is_writable($dst)) {
                 // Change file permission
                 chmod($dst, 0775);
                 // Modify source file anyway
-                touch( $dst, filemtime($src) );
+                touch($dst, filemtime($src));
             }
 		}
 	}
@@ -713,6 +718,7 @@ class Compressor extends ExternalModule
 		//$file_dir = (pathinfo( $path, PATHINFO_DIRNAME ) == '.' ? '' : pathinfo( $path, PATHINFO_DIRNAME ).'/');
 	
 		// Сюда соберем код программы
+        $main_code = '';
         $main_code = "\n".'// Модуль: '.m($module)->id().', файл: '.$path."\n";
 		
 		// Создадим уникальную коллекцию алиасов для NS
@@ -945,7 +951,9 @@ class Compressor extends ExternalModule
 		//trace('');			
 		
 		// Replace all class shortcut usage with full name
-		if( sizeof($file_uses) ) $main_code = $this->removeUSEStatement( $main_code, $file_uses );		
+		if (sizeof($file_uses)) {
+            $main_code = $this->removeUSEStatement($main_code, $file_uses);
+        }
 		
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
