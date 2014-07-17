@@ -21,43 +21,41 @@ use samson\core\ConfigType;
 // TODO: Обработка NS {} c фигурными скобками
 class Compressor extends ExternalModule
 {
-	/** Идентификатор модуля */
-	protected $id = 'compressor';
+    /** Идентификатор модуля */
+    protected $id = 'compressor';
+
+    /** Identifier of global namespace */
+    const NS_GLOBAL = '';
+
+    /** Array key for storing last generated data */
+    const VIEWS = 'views';
+
+    /** Output path for compressed web application */
+    public $output;
+
+    /** Collection of requires to insert in compressed file */
+    public $require = array();
+
+    /** Ignored resource extensions */
+    public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql');
+
+    /** Ignored resource files */
+    public $ignored_resources = array('composer.json', '.project', '.buildpath', '.gitignore');
+
+    /** Папка где размещается исходное веб-приложение */
+    public $input = __SAMSON_CWD__;
+
+    /** View rendering mode */
+    protected $view_mode = Core::RENDER_VARIABLE;
 	
-	/** Identifier of global namespace */
-	const NS_GLOBAL = '';
-	
-	/** Array key for storing last generated data */
-	const VIEWS = 'views';
-	
-	/** Output path for compressed web application */
-	public $output;
-	
-	/** Collection of requires to insert in compressed file */
-	public $require = array();
-	
-	/** Ignored resource extensions */
-	public $ignored_extensions = array( 'php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql' );
-	
-	/** Ignored resource files */
-	public $ignored_resources = array( 'composer.json', '.project', '.buildpath', '.gitignore', );
-	
-	/** Папка где размещается исходное веб-приложение */
-	public $input = __SAMSON_CWD__;
-	
-	/** View rendering mode */
-	protected $view_mode = Core::RENDER_VARIABLE;
-	
-	/** Указатель на текущий сворачиваемый модуль */
-	protected $current;
-	
-	/** Коллекция уже обработанных файлов */
-	protected $files = array();
-		
-	/** Collection for storing all php code by namespace */
-	protected $php = array( self::NS_GLOBAL => array() );
-	
-	public $requirements = array('resourcer');
+    /** Указатель на текущий сворачиваемый модуль */
+    protected $current;
+
+    /** Коллекция уже обработанных файлов */
+    protected $files = array();
+
+    /** Collection for storing all php code by namespace */
+    protected $php = array( self::NS_GLOBAL => array() );
 
     /**
      * Universal controller
@@ -69,69 +67,71 @@ class Compressor extends ExternalModule
        $this->compress( $phpVersion, true, $hideErrors );
     }
 
-	/**
-	 * Свернуть файл представления
-	 * @param string 	$view_file 	Полный путь к файлу представления
-	 * @param iModule 	$module		Указатель на модуль которому принадлежит это представление 
-	 */
-	public function compress_view( $view_file, iModule & $module )
-	{	
-		// Build relative path to module view		
-		$rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
-		
-		elapsed('  -- Preparing view: '.$view_file.'('.$rel_path.')' );
-		
-		// Прочитаем файл представления
-		$view_html = file_get_contents( $view_file );
-		
-		if( ! isset($view_file{0}) ) return e('View: ##(##) is empty', E_SAMSON_SNAPSHOT_ERROR, array($view_file, $rel_path) );
-		
-		// Найдем обращения к роутеру ресурсов
-		$view_html = preg_replace_callback( '/(<\?php)*\s*src\s*\(\s*(\'|\")*(?<path>[^\'\"\)]+)(\s*,\s*(\'|\")(?<module>[^\'\"\)]+))*(\'|\")*\s*\)\s*;*\s*(\?>)*/uis', array( $this, 'src_replace_callback'), $view_html );
-		
-		// Сожмем HTML
-		$view_html = Minify_HTML::minify($view_html);
-		
-		// Iterating throw render stack, with one way template processing
-		foreach ( s()->render_stack as & $renderer )
-		{
-			// Put view throught renderer handler
-			$view_html = call_user_func( $renderer, $view_html, array(), $this );
-		}	
-		
-		// Template generator
-		$view_html = s()->generate_template( $view_html );
-		
-		// If rendering from array
-		if( $this->view_mode == Core::RENDER_ARRAY )
-		{
-			// Build ouptput view path
-			$view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
-			
-			// Full path to output file
-			$dst = $this->output.$view_php;			
-			
-			// Copy view file
-			$this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file)
-			{
-				// Write new view content
-				file_put_contents( $dst, $view_html );
-			});			
-			
-			// Prepare view array value
-			$view_php = '\''.$view_php.'\';'; 		
-		}
-		// If rendering from variables is selected
-		else if( $this->view_mode == Core::RENDER_VARIABLE ) $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;"; 		
-	
-		// Add view code to final global namespace
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = '.$view_php;
-	}
-	
-	/**
-	 * Свернуть модуль
-	 * @param iModule $module Указатель на модуль для сворачивания
-	 */
+    /**
+     * Свернуть файл представления
+     * @param string 	$view_file 	Полный путь к файлу представления
+     * @param iModule 	$module		Указатель на модуль которому принадлежит это представление
+     */
+    public function compress_view( $view_file, iModule & $module )
+    {
+        // Build relative path to module view
+        $rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
+
+        elapsed('  -- Preparing view: '.$view_file.'('.$rel_path.')' );
+
+        // Прочитаем файл представления
+        $view_html = file_get_contents( $view_file );
+
+        if( ! isset($view_file{0}) ) return e('View: ##(##) is empty', E_SAMSON_SNAPSHOT_ERROR, array($view_file, $rel_path) );
+
+        // Найдем обращения к роутеру ресурсов
+        $view_html = preg_replace_callback( '/(<\?php)*\s*src\s*\(\s*(\'|\")*(?<path>[^\'\"\)]+)(\s*,\s*(\'|\")(?<module>[^\'\"\)]+))*(\'|\")*\s*\)\s*;*\s*(\?>)*/uis', array( $this, 'src_replace_callback'), $view_html );
+
+        // Сожмем HTML
+        $view_html = Minify_HTML::minify($view_html);
+
+        // Iterating throw render stack, with one way template processing
+        foreach ( s()->render_stack as & $renderer )
+        {
+            // Put view throught renderer handler
+            $view_html = call_user_func( $renderer, $view_html, array(), $this );
+        }
+
+        // Template generator
+        $view_html = s()->generate_template( $view_html );
+
+        // If rendering from array
+        if( $this->view_mode == Core::RENDER_ARRAY )
+        {
+            // Build ouptput view path
+            $view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
+
+            // Full path to output file
+            $dst = $this->output.$view_php;
+
+            // Copy view file
+            $this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file)
+            {
+                // Write new view content
+                file_put_contents( $dst, $view_html );
+            });
+
+            // Prepare view array value
+            $view_php = '\''.$view_php.'\';';
+        }
+        // If rendering from variables is selected
+        else if( $this->view_mode == Core::RENDER_VARIABLE ) $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;";
+
+        // Add view code to final global namespace
+        $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = '.$view_php;
+    }
+
+    /**
+     * Свернуть модуль
+     *
+     * @param iModule $module Указатель на модуль для сворачивания
+     * @param array   $data
+     */
 	public function compress_module( iModule & $module, array & $data )
 	{
 		// Идентификатор модуля
@@ -322,15 +322,18 @@ class Compressor extends ExternalModule
 // 		}		
 	
 		return $core_code;
-	}	
-	
-	/**
-	 * Copy file from source location to destination location with
-	 * analyzing last file modification time, and copying only changed files
-	 * 
-	 * @param string $src source file
-	 * @param string $dst destination file
-	 */
+	}
+
+    /**
+     * Copy file from source location to destination location with
+     * analyzing last file modification time, and copying only changed files
+     *
+     * @param string $src source file
+     * @param string $dst destination file
+     * @param null   $handler
+     *
+     * @return bool
+     */
 	public function copy_resource( $src, $dst, $handler = null )
 	{
 		if( !file_exists( $src )  ) return e('Cannot copy file - Source file(##) does not exists', E_SAMSON_SNAPSHOT_ERROR, $src );
@@ -362,12 +365,12 @@ class Compressor extends ExternalModule
 			else copy( $src, $dst );				
 			
 			// Sync source file with copied file
-			// Change file permission
-			chmod( $dst, 0775 );
-			
-			// Modify source file anyway
-			touch( $dst, filemtime($src) );
-			//touch( $src );
+			if(is_writable($dst)) {
+                // Change file permission
+                chmod($dst, 0775);
+                // Modify source file anyway
+                touch( $dst, filemtime($src) );
+            }
 		}
 	}
 	
@@ -664,17 +667,24 @@ class Compressor extends ExternalModule
 			}
 		}
 	}
-	
-	/**
-	 * Выполнить рекурсивное "собирание" файла
-	 *
-	 * @param string $path Абсолютный путь к файлу сайта
-	 */
-	// TODO: Довести до ума разпознование require - убрать точку с зяпятоц которая остается
-	// TODO: Убрать пустые линии
-	// TODO: Анализатор использования функция и переменных??
+
+    /**
+     * Выполнить рекурсивное "собирание" файла
+     *
+     * @param string $path Абсолютный путь к файлу сайта
+     *
+     * @param null   $module
+     * @param array  $code
+     * @param string $namespace
+     *
+     * @return string
+     */
 	public function compress_php( $path, $module = NULL, & $code = array(), $namespace = self::NS_GLOBAL )
-	{				
+	{
+        // TODO: Довести до ума разпознование require - убрать точку с зяпятоц которая остается
+        // TODO: Убрать пустые линии
+        // TODO: Анализатор использования функция и переменных??
+
 		//trace(' + Вошли в функцию:'.$path.'('.$namespace.')');
 		$path = normalizepath(realpath($path));
 	
@@ -698,12 +708,12 @@ class Compressor extends ExternalModule
 		// Если в файле нет namespace - считаем его глобальным 
 		if( strpos( $fileStr, 'namespace' ) === false )
 		
-		$file_dir = '';
+		//$file_dir = '';
 		// Вырежим путь к файлу
-		$file_dir = (pathinfo( $path, PATHINFO_DIRNAME ) == '.' ? '' : pathinfo( $path, PATHINFO_DIRNAME ).'/');
+		//$file_dir = (pathinfo( $path, PATHINFO_DIRNAME ) == '.' ? '' : pathinfo( $path, PATHINFO_DIRNAME ).'/');
 	
 		// Сюда соберем код программы
-		$main_code = "\n".'// Модуль: '.m($module)->id().', файл: '.$path."\n";
+        $main_code = "\n".'// Модуль: '.m($module)->id().', файл: '.$path."\n";
 		
 		// Создадим уникальную коллекцию алиасов для NS
 		if( !isset($code[ $namespace ][ 'uses' ] ) ) $code[ $namespace ][ 'uses' ] = array();
@@ -802,8 +812,9 @@ class Compressor extends ExternalModule
 								
 								$uses[] = $_use;									
 							}
-						}
-						else $main_code .= ' use ';
+						} else {
+                            $main_code .= ' use ';
+                        }
 						
 						// Сместим указатель чтения файла
 						$i = $j;
@@ -917,8 +928,9 @@ class Compressor extends ExternalModule
 								// Измением позицию маркера чтения файла
 								$i = $j;
 							}
-						}
-						else $main_code .= $text;
+						} else {
+                            $main_code .= $text;
+                        }
 						
 					}
 					break;				
@@ -937,6 +949,8 @@ class Compressor extends ExternalModule
 		
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
+
+        return $main_code;
 	}
 	
 	/** Constructor */
@@ -1043,12 +1057,15 @@ class Compressor extends ExternalModule
 			}
 		}
 	}
-	
-	/**
-	 * Remove all USE statements and replace class shortcuts to full class names
-	 * @param string 	$code 		Code to work with
-	 * @param array 	$classes	Array of class names to replace
-	 */
+
+    /**
+     * Remove all USE statements and replace class shortcuts to full class names
+     *
+     * @param string $code    Code to work with
+     * @param array  $classes Array of class names to replace
+     *
+     * @return bool|mixed|string
+     */
 	private function removeUSEStatement( $code, array $classes )
 	{				
 		//elapsed($classes);

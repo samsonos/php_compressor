@@ -1,4 +1,9 @@
+.idea*
+vendor/*
 upload/*
 cache/*
+cms/*
 cms/cache/*
-cms/upload/*
+cms/upload/* 
+composer.lock
+composer.phar
