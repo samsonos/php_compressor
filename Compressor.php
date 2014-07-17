@@ -135,8 +135,8 @@ class Compressor extends ExternalModule
      * @param iModule $module Указатель на модуль для сворачивания
      * @param array   $data
      */
-	public function compress_module(iModule & $module, array & $data)
-	{
+    public function compress_module(iModule & $module, array & $data)
+    {
 		// Идентификатор модуля
 		$id = $module->id();	
 		$module_path = $module->path();
@@ -422,8 +422,7 @@ class Compressor extends ExternalModule
 			$module = & s()->module_stack[ $id ];		
 			
 			// Work only with copressable modules
-			if ( is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core')))
-			{
+			if (is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core'))) {
 				$this->compress_module( $module, $data );					
 			}		
 		}
@@ -431,16 +430,14 @@ class Compressor extends ExternalModule
 		// Iterate only local modules
 		foreach ( s()->module_stack as $id => & $module )
 		{			
-			if ( is_a( $module, ns_classname( 'CompressableLocalModule', 'samson\core')))
-			{
+			if (is_a( $module, ns_classname( 'CompressableLocalModule', 'samson\core'))) {
 				// Change path to module			
 				$module->path('');
 			}
 		}		
 		
 		// If resourcer is loaded - copy css and js
-		if( isset( s()->module_stack['resourcer'] )) 
-		{
+		if (isset( s()->module_stack['resourcer'] )) {
 			// Link
 			$rr = & s()->module_stack['resourcer'];
 						
@@ -487,9 +484,8 @@ class Compressor extends ExternalModule
             define('DEFAULT_LOCALE', 'ru');
         }
 
-        // Add it to the beggining
-        $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");'.$this->php[ self::NS_GLOBAL ][ self::VIEWS ];
-
+        // Add default system locale to them end of core defenition
+        $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 		
 		// Remove standart framework entry point from index.php	- just preserve default controller	
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
@@ -500,7 +496,7 @@ class Compressor extends ExternalModule
 		
 		// Clear default entry point
 		$this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ] = '';
-	
+
 		// Set global namespace as last
 		$global_ns = $this->php[ self::NS_GLOBAL ];
 		unset( $this->php[ self::NS_GLOBAL ] );
