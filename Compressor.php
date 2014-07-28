@@ -691,7 +691,8 @@ class Compressor extends ExternalModule
 	
 		// Если мы уже подключили данный файл или он не существует
 		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$path.', уже собран' );
-		else if( !is_file($path) )				return elapsed('    ! Файл: '.$path.', не существует' );		
+		else if( !is_file($path) )				return elapsed('    ! Файл: '.$path.', не существует' );	
+		else if(strpos($path, 'vendor/autoload.php') !== false) return elapsed('Ignoring composer autoloader: '.$path);
 	
 		elapsed('  -- Собираю PHP код из файла: '.$path );
 	
