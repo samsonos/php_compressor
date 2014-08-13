@@ -269,8 +269,9 @@ class Compressor extends ExternalModule
 		foreach ( s()->module_stack as $id => & $m ) 
 		{
 			if ( !( is_a( $m, ns_classname( 'iModuleCompressable', 'samson\core')))) 
-			{					
+			{
 				s()->unload( $id );
+
 			}
 			else
 			{
@@ -419,9 +420,9 @@ class Compressor extends ExternalModule
 		foreach ( s()->load_module_stack as $id => & $data )
 		{	
 			// Get module instance				
-			$module = & s()->module_stack[ $id ];		
-			
-			// Work only with copressable modules
+			$module = & s()->module_stack[ $id ];
+
+			// Work only with compressable modules
 			if (is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core'))) {
 				$this->compress_module( $module, $data );					
 			}		
