@@ -40,7 +40,7 @@ class Compressor extends ExternalModule
     public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql');
 
     /** Ignored resource files */
-    public $ignored_resources = array('composer.json', '.project', '.buildpath', '.gitignore');
+    public $ignored_resources = array('composer.json', '.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml');
 
     /** Папка где размещается исходное веб-приложение */
     public $input = __SAMSON_CWD__;
