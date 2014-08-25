@@ -31,7 +31,7 @@ class Compressor extends ExternalModule
     const VIEWS = 'views';
 
     /** Output path for compressed web application */
-    public $output;
+    public $output = '/out/';
 
     /** Collection of requires to insert in compressed file */
     public $require = array();
@@ -429,9 +429,8 @@ class Compressor extends ExternalModule
 		}
 		
 		// Iterate only local modules
-		foreach ( s()->module_stack as $id => & $module )
-		{			
-			if (is_a( $module, ns_classname( 'CompressableLocalModule', 'samson\core'))) {
+		foreach ( s()->module_stack as $id => & $module ) {
+            if (is_a( $module, \samson\core\AutoLoader::classname( 'samson\core\CompressableLocalModule'))) {
 				// Change path to module			
 				$module->path('');
 			}
