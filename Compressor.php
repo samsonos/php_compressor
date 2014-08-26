@@ -430,7 +430,7 @@ class Compressor extends ExternalModule
 		
 		// Iterate only local modules
 		foreach ( s()->module_stack as $id => & $module ) {
-            if (is_a( $module, \samson\core\AutoLoader::classname( 'samson\core\CompressableLocalModule'))) {
+            if (is_a( $module, \samson\core\AutoLoader::classname('samson\core\CompressableLocalModule'))) {
 				// Change path to module			
 				$module->path('');
 			}
