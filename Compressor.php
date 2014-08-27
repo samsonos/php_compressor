@@ -37,7 +37,7 @@ class Compressor extends ExternalModule
     public $require = array();
 
     /** Ignored resource extensions */
-    public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql');
+    public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
 
     /** Ignored resource files */
     public $ignored_resources = array('composer.json', '.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml');
@@ -455,28 +455,34 @@ class Compressor extends ExternalModule
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
 
 		// Add all specified requires
-		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';		
-		
+		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';
+
+        // Add localization data
+        $locale_str = array();
+        foreach (\samson\core\SamsonLocale::$locales as $locale) {
+            if( $locale != '' ) {
+                $locale_str[] = '\''.$locale.'\'';
+            }
+        }
+        // Add [setlocales] code
+        $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
+
+        // TODO: add generic handlers to modules to provide compressing logic for each module
+        // TODO: add generic constants namespace to put all constants defenition there - and put only defined constrat and redeclare them
+
 		// If this is remote web-app - collect local resources
 		if( __SAMSON_REMOTE_APP )
 		{
+            // TODO: WTF???? Thi must be local module logic
+            // Gather all resources
 			$path = __SAMSON_CWD__;
+            $ls = array();
 			s()->resources( $path, $ls );
-
-            // Add localization data
-            $locale_str = array();
-            foreach (\samson\core\SamsonLocale::$locales as $locale) {
-                if( $locale != '' ) $locale_str[] = '\''.$locale.'\'';
-
-                $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
-            }
-
-            // TODO: add generic handlers to modules to provide compressing logic for each module
-            // TODO: add generic constants namespace to put all constants defenition there - and put only defined constrat and redeclare them
-
 			
 			// If we have any resources
-			if( isset($ls['resources']) ) $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );			
+			if (isset($ls['resources'])) {
+                $this->copy_path_resources( $ls['resources'], __SAMSON_CWD__, '' );
+            }
 		}
 
         // If default locale is defined
