@@ -263,7 +263,7 @@ class Compressor extends ExternalModule
 	public function compress_core( $no_ns = false )
 	{
 		// Load production configuration
-		Config::load( ConfigType::PRODUCTION );
+		Config::load(s(), ConfigType::PRODUCTION);
 		
 		// Unload all modules from core that does not implement interface iModuleCompressable
 		foreach ( s()->module_stack as $id => & $m ) 
