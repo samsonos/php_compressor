@@ -262,8 +262,11 @@ class Compressor extends ExternalModule
 	/** Prepare core serialized string only with nessesar and correct data	*/	
 	public function compress_core( $no_ns = false )
 	{
+        // Get core pointer
+        $core = & s();
+
 		// Load production configuration
-		Config::load(s(), ConfigType::PRODUCTION);
+		Config::load($core, ConfigType::PRODUCTION);
 		
 		// Unload all modules from core that does not implement interface iModuleCompressable
 		foreach ( s()->module_stack as $id => & $m ) 
