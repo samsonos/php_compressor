@@ -93,12 +93,10 @@ class Compressor extends ExternalModule
         // Сожмем HTML
         $view_html = Minify_HTML::minify($view_html);
 
-        // Iterating throw render stack, with one way template processing
-        foreach ( s()->render_stack as & $renderer )
-        {
-            // Put view throught renderer handler
-            $view_html = call_user_func( $renderer, $view_html, array(), $this );
-        }
+        // Fire event to render view correctly
+        \samson\core\Event::fire('core.render', array(&$view_html, array(), &$module));
+
+        // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
 
         // Template generator
         $view_html = s()->generate_template( $view_html );
@@ -106,7 +104,7 @@ class Compressor extends ExternalModule
         // If rendering from array
         if( $this->view_mode == Core::RENDER_ARRAY )
         {
-            // Build ouptput view path
+            // Build output view path
             $view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
 
             // Full path to output file
@@ -169,6 +167,8 @@ class Compressor extends ExternalModule
 			
 		// Call special method enabling module personal resource post-management on compressing
 		$module->afterCompress( $this, $this->php );
+
+        $this->optimize_events($module_php);
 		
 		// Gather all code in to global code collection with namespaces
 		$this->code_array_combine( $module_php, $this->php );
@@ -258,6 +258,25 @@ class Compressor extends ExternalModule
 		return $path;
 		//e('Файл представления ## - Обращение к роутеру ресурсов через переменную ##', E_SAMSON_SNAPSHOT_ERROR, array($view_path, $path));
 	}
+
+    /**
+     * Routine for automatic optimization of SamsonPHP events system
+     */
+    public function optimize_events($php)
+    {
+        $listeners = \samson\core\Event::listeners();
+
+        // Text matching event firing action
+        if (preg_match_all('/Event::fire\((?<key>[^,]+),(?<params>[^)]+)/', $php, $matches)) {
+            trace($matches, true);
+        }
+
+        // Find all events declarations
+        // Get listeners collection from Event
+        // Iterate event declarations
+        // Watch listener signature
+        // If listener namespace is compressed generate straight code and pass parameters there
+    }
 	
 	/** Prepare core serialized string only with nessesar and correct data	*/	
 	public function compress_core( $no_ns = false )
@@ -536,7 +555,7 @@ class Compressor extends ExternalModule
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );		
 		
-		// Remove url_base parsing ant put current url base 
+		// Remove url_base parsing and put current url base
 		if( preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches ))
 		{
 			$index_php = str_replace($matches[0], 'define(\'__SAMSON_BASE__\',\''.__SAMSON_BASE__.'\');', $index_php);			
