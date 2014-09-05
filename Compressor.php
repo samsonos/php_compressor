@@ -96,10 +96,9 @@ class Compressor extends ExternalModule
         // Fire event to render view correctly
         \samson\core\Event::fire('core.render', array(&$view_html, array(), &$module));
 
+        // Template rerendering
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
-
-        // Template generator
-        $view_html = s()->generate_template( $view_html );
+        \samson\core\Event::fire('core.rendered', array(&$view_html, array(), &$this));
 
         // If rendering from array
         if( $this->view_mode == Core::RENDER_ARRAY )
