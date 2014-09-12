@@ -166,8 +166,6 @@ class Compressor extends ExternalModule
 			
 		// Call special method enabling module personal resource post-management on compressing
 		$module->afterCompress( $this, $this->php );
-
-        $this->optimize_events($module_php);
 		
 		// Gather all code in to global code collection with namespaces
 		$this->code_array_combine( $module_php, $this->php );
@@ -261,14 +259,70 @@ class Compressor extends ExternalModule
     /**
      * Routine for automatic optimization of SamsonPHP events system
      */
-    public function optimize_events($php)
+    public function optimize_events($code)
     {
+        // Get all event listeners
         $listeners = \samson\core\Event::listeners();
 
+        $subscribers = array();
         // Text matching event firing action
-        if (preg_match_all('/Event::fire\((?<key>[^,]+),(?<params>[^)]+)/', $php, $matches)) {
-            trace($matches, true);
+        if (is_string($code) && preg_match_all('/Event::subscribe\(\s*(\'|\")(?<key>[^,)]+)(\'|\"),(?<params>[^);]+)?/', $code, $matches)) {
+            // Gather all subscribers to collection
+            for ($i=0, $length=sizeof($matches['key']); $i < $length; $i++) {
+                $handler = & $subscribers[$matches['key'][$i]];
+                $handler = isset($handler) ? $handler : array();
+
+                $handler[] = $matches['params'][$i].')';
+            }
+            trace($subscribers, true);
         }
+
+        // Text matching event firing action
+        if (is_string($code) && preg_match_all('/Event::fire\((\'|\")(?<key>[^,)]+)(\'|\"),(?<params>[^;]+)\)/', $code, $matches)) {
+            // Iterate all event fires
+            for ($i=0, $length=sizeof($matches['key']); $i < $length; $i++) {
+                // Get event identifier
+                $key = $matches['key'][$i];
+                // Get event fire parameters
+                $params = $matches['params'][$i].')';
+
+                //trace($key);
+
+                // Find event subscribers
+                $callbacks = & $listeners[$key];
+                if (isset($callbacks)) {
+
+                }
+            }
+        }
+
+        foreach ($listeners as $key => $handlers) {
+            if (sizeof($handlers)) {
+                trace($key);
+                foreach ($handlers as $handler) {
+                    if (is_array($handler[0])) {
+                        if (is_object($handler[0][0])) {
+                            $isModule = ($handler[0][0] instanceof \samson\core\Module) ? '[module]' : '[dynamic]';
+                            trace('   -- '.$isModule.' '.get_class($handler[0][0]).'->'.$handler[0][1].'()');
+                        } else {
+                            trace('   -- [static] '.$handler[0][0].'::'.$handler[0][1].'()');
+                        }
+                    } else {
+                        trace('   -- [global] '.$handler[0].'()');
+                    }
+                }
+            }
+        }
+
+        // We can automatically change global functions as event calls
+        // We can automatically change static functions as event calls
+        // We can automatically change module function as event calls
+        // All other cases must be left as unchanged and we cannot replace them,
+        // in current example this is the URL class. which is created somewhere and somehow
+        // and cannot be guessed, we can make it as module? But what to do with other classes?
+        // So this approach is not so generic?
+
+
 
         // Find all events declarations
         // Get listeners collection from Event
@@ -514,7 +568,7 @@ class Compressor extends ExternalModule
         // Add default system locale to them end of core defenition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 		
-		// Remove standart framework entry point from index.php	- just preserve default controller	
+		// Remove standard framework entry point from index.php	- just preserve default controller
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
 		{
 			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
@@ -552,7 +606,10 @@ class Compressor extends ExternalModule
 		}		
 		
 		// Соберем весь PHP код в один файл
-		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );		
+		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );
+
+        // Remove events from code
+        $this->optimize_events($index_php);
 		
 		// Remove url_base parsing and put current url base
 		if( preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches ))
