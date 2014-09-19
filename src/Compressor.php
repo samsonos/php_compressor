@@ -567,6 +567,14 @@ class Compressor extends ExternalModule
 
         // Add default system locale to them end of core defenition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
+
+        $entryScript = $this->php[self::NS_GLOBAL][$realpath.'index.php'];
+        $eventCompressor = new EventCompressor();
+        //
+        if ($eventCompressor->transform($entryScript, $entryScript))
+        {
+
+        }
 		
 		// Remove standard framework entry point from index.php	- just preserve default controller
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
