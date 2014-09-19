@@ -2,7 +2,9 @@
 vendor/*
 upload/*
 cache/*
-cms/*
+www/cache/*
+www/cms/*
+www/upload/*
 cms/cache/*
 cms/upload/* 
 composer.lock

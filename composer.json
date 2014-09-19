@@ -1,1 +1,20 @@
-{"name":"samsonos/php_compressor","author":"Vitaly Iegorov <egorov@samsonos.com>","version":"0.0.1","require":{"samsonos/php_resourcer":"*"},"license":"Open Software License (OSL) v 3.0","homepage":"http://samsonos.com/"}
+{
+    "name":"samsonos/php_compressor",
+    "authors":[
+        {
+            "name":"Vitaly Iegorov",
+            "email":"egorov@samsonos.com"
+        }
+    ],
+    "require":{
+        "samsonos/php_resourcer":"*"
+    },
+    "license":"Open Software License (OSL) v 3.0",
+    "homepage":"http://samsonphp.com/",
+    "autoload" : {
+        "classmap": ["src/"],
+        "psr-0": {
+            "samsonos\\compressor\\": "src/"
+        }
+    }
+}
