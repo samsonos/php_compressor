@@ -570,11 +570,8 @@ class Compressor extends ExternalModule
 
         $entryScript = $this->php[self::NS_GLOBAL][$realpath.'index.php'];
         $eventCompressor = new EventCompressor();
-        //
-        if ($eventCompressor->transform($entryScript, $entryScript))
-        {
-
-        }
+        // Collect all event system data
+        $eventCompressor->collect($entryScript);
 		
 		// Remove standard framework entry point from index.php	- just preserve default controller
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
@@ -616,9 +613,14 @@ class Compressor extends ExternalModule
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );
 
-        // Remove events from code
-        $this->optimize_events($index_php);
-		
+        // Collect all event system data
+        $eventCompressor->collect($index_php);
+
+        // Transform event system in all project code
+        if ($eventCompressor->transform($index_php, $index_php)) {
+            //trace($eventCompressor->subscriptions, true);
+        }
+
 		// Remove url_base parsing and put current url base
 		if( preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches ))
 		{
