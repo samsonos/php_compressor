@@ -13,7 +13,10 @@
 class EventCompressor 
 {
     /** @var  array Collection of event subscriptions and handlers */
-    public $events = array();
+    public $subscriptions = array();
+
+    /** @var array Collection of event fires */
+    public $fires = array();
 
     protected function & parseSubscription(array & $matches)
     {
@@ -57,7 +60,15 @@ class EventCompressor
         }
 
         // Call generic subscription parser
-        return $this->parseSubscription($code);
+        return $this->parseSubscription($matches);
+    }
+
+    /**
+     * Find all event fire calls in code
+     */
+    public function findAllFires($code)
+    {
+
     }
 
     /**
@@ -80,19 +91,16 @@ class EventCompressor
         }
 
         // Call generic subscription parser
-        return $this->parseSubscription($code);
+        return $this->parseSubscription($matches);
     }
 
     public function transform($input, & $output = '')
     {
-        // Clears events collection
-        $this->events = array();
-
         // Gather all events
-        $this->events = array_merge(
-            $this->events,
+        $this->subscriptions = array_merge(
+            $this->subscriptions,
             $this->findAllDynamicSubscriptions($input),
-            $this->findAllStaticCalls($input)
+            $this->findAllStaticSubscriptions($input)
         );
 
         // Iterate all events
