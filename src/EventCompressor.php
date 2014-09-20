@@ -43,7 +43,7 @@ class EventCompressor
             $args = array();
             if (preg_match('/\s*array\s*\((?<object>[^,]+)\s*,\s*(\'|\")(?<method>[^\'\"]+)/ui', $handler, $args)) {
                 // If this is static
-                $metadata['object'] = stripos($args['object'], '::') !== false ? $args['object'] : $args['object'].'->';
+                $metadata['object'] = $args['object'];
                 $metadata['method'] = $args['method'];
             } else { //global function
                 $metadata['method'] = str_replace(array('"',"'"), '', $handler);
@@ -95,7 +95,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+))?/ui';
+        $pattern = '/Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -180,21 +180,68 @@ class EventCompressor
         // Gather everything again
         //$this->collect($input);
 
+        // Get all defined handlers
+        $handlers = \samson\core\Event::listeners();
+
+        // Iterate all event fire calls
         foreach ($this->fires as $id => $data) {
-            trace($id);
+            // Collection of actual event handler call for replacement
+            $code = array();
 
             // Set pointer to event subscriptions collection
             $subscriptions = & $this->subscriptions[$id];
             if (isset($subscriptions)) {
                 // Iterate event subscriptions
                 foreach ($subscriptions as $event) {
+                    // If subscriber callback is object method
+                    if (isset($event['object'])) {
+                        $eventHandlers = & $handlers[$id];
+                        if (isset($eventHandlers)) {
+                            // Iterate all handlers
+                            foreach ($eventHandlers as $handler) {
+                                $call = '';
+                                // Get pointer to object
+                                $object = & $handler[0][0];
+                                // Handler object is module ancestor
+                                //if (in_array('\samson\core\iModule', class_implements($handler[0]))) {
+                                if ($object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
+                                    // Build object method call
+                                    $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
+                                } else if(strpos($event['object'], '(') !== false) { // Other class - create instance of it?
+                                    // Build object method call
+                                    $call = $event['object'].'->' . $event['method'] . '(';
 
-                    $replace = isset($event['object']) ? $event['object'] : '';
-                    $replace .= $event['method'].'(';
-                    $replace .= implode(', ', $data['params']).');';
+                                    // TODO: Define what to do with other classes, only functions supported
+                                }
 
-                    trace($replace);
+                                // If we have found correct object
+                                if (isset($call{0})) {
+                                    // Event fire passes parameters
+                                    if (is_array($data['params'])) {
+                                        $call .= implode(', ', $data['params']);
+                                    }
+
+                                    // Gather object calls
+                                    $code[] = $call . ');';
+                                }
+                            }
+                        }
+                    } else { // Global function
+                        if (strpos($event['method'], '$') === false) {
+                            $code[] = $event['method'] . '(' . implode(', ', $data['params']) . ');';
+                        } else {
+                            elapsed('Cannot replace event fire method with "'.$event['method'].'" - variables not supported');
+                        }
+                    }
                 }
+            }
+
+            // Replace Event::fire call with actual handlers
+            $replacement = implode("\n", $code);
+            $input = str_replace($data['source'], $replacement, $input);
+
+            foreach ($code as $replace) {
+                elapsed('Replacing '.$data['source'].' with '.$replace);
             }
         }
 
