@@ -95,7 +95,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<params>[^;]+)/ui';
+        $pattern = '/Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+))?/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -177,16 +177,18 @@ class EventCompressor
 
     public function transform($input, & $output = '')
     {
+        // Gather everything again
+        //$this->collect($input);
+
         foreach ($this->fires as $id => $data) {
             trace($id);
-            trace($data);
 
             // Set pointer to event subscriptions collection
             $subscriptions = & $this->subscriptions[$id];
             if (isset($subscriptions)) {
                 // Iterate event subscriptions
                 foreach ($subscriptions as $event) {
-                    trace($event, true);
+
                     $replace = isset($event['object']) ? $event['object'] : '';
                     $replace .= $event['method'].'(';
                     $replace .= implode(', ', $data['params']).');';
@@ -194,13 +196,6 @@ class EventCompressor
                     trace($replace);
                 }
             }
-            /*trace('Found event: '.$matches[0][$i]);
-
-            // Check if we have a variable in handler
-            if (stripos($handler, '$') !== false) {
-                trace('!! Cannot handle event subscription: "'.$matches[0][$i].'", you must avoid using variable in it');
-            } else {
-            }*/
         }
 
         // Copy output
