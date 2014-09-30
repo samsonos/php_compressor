@@ -575,7 +575,7 @@ class Compressor extends ExternalModule
  						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
- 					// Find all class definition 
+ 					/*// Find all class definition
  					if (preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches)) {
  						$php = $this->changeClassName($matches, $php, $ns );
  					}
@@ -616,25 +616,16 @@ class Compressor extends ExternalModule
  					} 		
  					
  					// Replace special word with its value
- 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php);
- 					
-					$php_code .= $php;
-				} else { // Just concatenate file code
-                    $php_code .= $php;
-                }
+ 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php);*/
+				}
+
+                // Just concatenate file code
+                $php_code .= $php;
 			}
 			
 			// Close namespace if we support
 			if( !$no_ns ) $php_code .= "\n".'}';	
-		}	
-
-// 		// Crear all namespace classnames, ommitting global namespace
-// 		if( $no_ns) foreach ( $code as $ns => $files ) if( $ns != self::NS_GLOBAL )
-// 		{
-// 			elapsed('Clearing namespace: '.$ns);
-			
-// 			$php_code = str_ireplace( array( '\\'.$ns.'\\', $ns.'\\'), '', $php_code );
-// 		}
+		}
 		
 		return $php_code;
 	}
@@ -987,11 +978,16 @@ class Compressor extends ExternalModule
 
 		// Replace class name in source
 		$replace = str_replace($className, $nClassName, $source);
-			
+
+        if(strpos($source, 'm(')) {
+            trace($source, true);
+        }
+
 		// Replace code
 		$php = str_ireplace($source, $replace, $php);
 
         trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
+        trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
 		
 		return $php;
 	}

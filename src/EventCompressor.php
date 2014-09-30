@@ -95,7 +95,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
+        $pattern = '/(samson_core_)?Event::fire\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
