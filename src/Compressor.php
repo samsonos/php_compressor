@@ -255,84 +255,9 @@ class Compressor extends ExternalModule
 		return $path;
 		//e('Файл представления ## - Обращение к роутеру ресурсов через переменную ##', E_SAMSON_SNAPSHOT_ERROR, array($view_path, $path));
 	}
-
-    /**
-     * Routine for automatic optimization of SamsonPHP events system
-     */
-    public function optimize_events($code)
-    {
-        // Get all event listeners
-        $listeners = \samson\core\Event::listeners();
-
-        $subscribers = array();
-        // Text matching event firing action
-        if (is_string($code) && preg_match_all('/Event::subscribe\(\s*(\'|\")(?<key>[^,)]+)(\'|\"),(?<params>[^);]+)?/', $code, $matches)) {
-            // Gather all subscribers to collection
-            for ($i=0, $length=sizeof($matches['key']); $i < $length; $i++) {
-                $handler = & $subscribers[$matches['key'][$i]];
-                $handler = isset($handler) ? $handler : array();
-
-                $handler[] = $matches['params'][$i].')';
-            }
-            trace($subscribers, true);
-        }
-
-        // Text matching event firing action
-        if (is_string($code) && preg_match_all('/Event::fire\((\'|\")(?<key>[^,)]+)(\'|\"),(?<params>[^;]+)\)/', $code, $matches)) {
-            // Iterate all event fires
-            for ($i=0, $length=sizeof($matches['key']); $i < $length; $i++) {
-                // Get event identifier
-                $key = $matches['key'][$i];
-                // Get event fire parameters
-                $params = $matches['params'][$i].')';
-
-                //trace($key);
-
-                // Find event subscribers
-                $callbacks = & $listeners[$key];
-                if (isset($callbacks)) {
-
-                }
-            }
-        }
-
-        foreach ($listeners as $key => $handlers) {
-            if (sizeof($handlers)) {
-                trace($key);
-                foreach ($handlers as $handler) {
-                    if (is_array($handler[0])) {
-                        if (is_object($handler[0][0])) {
-                            $isModule = ($handler[0][0] instanceof \samson\core\Module) ? '[module]' : '[dynamic]';
-                            trace('   -- '.$isModule.' '.get_class($handler[0][0]).'->'.$handler[0][1].'()');
-                        } else {
-                            trace('   -- [static] '.$handler[0][0].'::'.$handler[0][1].'()');
-                        }
-                    } else {
-                        trace('   -- [global] '.$handler[0].'()');
-                    }
-                }
-            }
-        }
-
-        // We can automatically change global functions as event calls
-        // We can automatically change static functions as event calls
-        // We can automatically change module function as event calls
-        // All other cases must be left as unchanged and we cannot replace them,
-        // in current example this is the URL class. which is created somewhere and somehow
-        // and cannot be guessed, we can make it as module? But what to do with other classes?
-        // So this approach is not so generic?
-
-
-
-        // Find all events declarations
-        // Get listeners collection from Event
-        // Iterate event declarations
-        // Watch listener signature
-        // If listener namespace is compressed generate straight code and pass parameters there
-    }
 	
-	/** Prepare core serialized string only with nessesar and correct data	*/	
-	public function compress_core( $no_ns = false )
+	/** Prepare core serialized string only with necessary and correct data	*/
+	public function compress_core($no_ns = false)
 	{
         // Get core pointer
         $core = & s();
@@ -371,34 +296,17 @@ class Compressor extends ExternalModule
 		$core_code = serialize(s());
 		
 		// If no namespaces 
-		if( $no_ns )
-		{
-			if( preg_match_all('/O:\d+:\"(?<classname>[^\"]+)\"/i', $core_code, $matches))
-			{
-				for ($i = 0; $i < sizeof($matches[0]); $i++) 
-				{
+		if ($no_ns) {
+			if (preg_match_all('/O:\d+:\"(?<classname>[^\"]+)\"/i', $core_code, $matches)) {
+				for ($i = 0; $i < sizeof($matches[0]); $i++) {
 					$source = $matches[0][$i];
 					
 					$classname = $matches['classname'][$i];
 					
-					$core_code = $this->transformClassName( $source, $classname, $core_code, nsname($classname) );					
+					$core_code = $this->transformClassName($source, $classname, $core_code, nsname($classname));
 				}
 			}
 		}
-		
-// 		// Find all class description in serialized core string
-// 		if( ($this->view_mode == Core::RENDER_ARRAY) && preg_match_all('/O:(?<length>\d+):\"(?<class>[^\"]+)\"/', $core_code, $matches ))
-// 		{
-// 			// Remove namespaces in class definition
-// 			for ( $i = 0; $i < sizeof($matches[0]); $i++ )
-// 			{
-// 				// Generate correct class name without namespaces
-// 				$class = ns_classname( classname($matches[ 'class' ][ $i ]), nsname(classname($matches[ 'class' ][ $i ])));
-		
-// 				// Change class description in serialized string
-// 				$core_code = str_ireplace( $matches[0][$i], 'O:'.strlen($class).':"'.$class.'"', $core_code);
-// 			}
-// 		}		
 	
 		return $core_code;
 	}
@@ -701,7 +609,6 @@ class Compressor extends ExternalModule
  					// Find all class extends
  					if( preg_match_all( '/\s+extends\s+(?<classname>[^\s]+)/i', $php, $matches ))
  					{
-                        trace('Extends');
  						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
@@ -1093,7 +1000,7 @@ class Compressor extends ExternalModule
 		// Replace code
 		$php = str_ireplace($source, $replace, $php);
 
-        trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
+        //trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
         //trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
 		
 		return $php;
