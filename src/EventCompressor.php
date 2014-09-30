@@ -237,8 +237,7 @@ class EventCompressor
             }
 
             // Replace Event::fire call with actual handlers
-            $replacement = implode("\n", $code);
-            $input = str_replace($data['source'], $replacement, $input);
+            $input = str_replace($data['source'], implode("\n", $code), $input);
 
             foreach ($code as $replace) {
                 elapsed('Replacing '.$data['source'].' with '.$replace);
