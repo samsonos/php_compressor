@@ -575,7 +575,7 @@ class Compressor extends ExternalModule
  						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
- 					/*// Find all class definition
+ 					// Find all class definition
  					if (preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches)) {
  						$php = $this->changeClassName($matches, $php, $ns );
  					}
@@ -616,7 +616,7 @@ class Compressor extends ExternalModule
  					} 		
  					
  					// Replace special word with its value
- 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php);*/
+ 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php);
 				}
 
                 // Just concatenate file code
@@ -986,8 +986,8 @@ class Compressor extends ExternalModule
 		// Replace code
 		$php = str_ireplace($source, $replace, $php);
 
-        trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
-        trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
+        //trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
+        //trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
 		
 		return $php;
 	}
