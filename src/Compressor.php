@@ -655,14 +655,13 @@ class Compressor extends ExternalModule
 			if( !$no_ns ) $php_code .= "\n".'namespace '.$ns.'{';			
 			
 			// Insert files code
-			foreach ( $files as $file => $php ) 
-			{				
-				// Ignore uses array	
-				if( $file == 'uses' ) continue;
+			foreach ($files as $file => $php) {
+                // Ignore uses array
+                if( $file == 'uses' ) continue;
+			    // TODO: Add uses support class name changing
 				
 				// If we does not support namespaces
-				if( $no_ns )
- 				{ 				
+				if ($no_ns) {
  					//trace();
  					//trace($file); 	
  					// Find all static class usage
@@ -689,13 +688,11 @@ class Compressor extends ExternalModule
  						$php = $this->changeClassName( $matches, $php, $ns ); 						 
  					}
  					
- 					// Find all class implements
- 					if( preg_match_all( '/\s+implements\s+(?<classes>.*)/i', $php, $matches ))
- 					{ 	
+ 					// Find all class implements, class can implement many interfaces
+ 					if( preg_match_all( '/\s+implements\s+(?<classes>.*)/i', $php, $matches )) {
  						$replace = $matches[0][0];
- 						foreach ( explode(',', $matches['classes'][0]) as $classname ) 
- 						{ 							
- 							$replace = $this->transformClassName( $classname, $classname, $replace, $ns );
+ 						foreach (explode(',', $matches['classes'][0]) as $classname) {
+ 							$replace = $this->transformClassName($classname, $classname, $replace, $ns);
  						}  	
 
  						$php = str_replace($matches[0][0], $replace, $php);
@@ -1055,53 +1052,41 @@ class Compressor extends ExternalModule
 	/** Constructor */
 	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
 	
-	/** Transfrom classname with namespace to PHP 5.2 format */
-	private function transformClassName( $source, $classname, $php, $ns )
-	{		
-		// Create old-styled namespace format
-		$old_ns = ( $ns != '') ? str_replace( '\\', '_', $ns ).'_' : $ns;		
-		
-		// Create classname replacement
-		$newclassname = $old_ns.$classname;
-			
-		// Try to get namespace from class name
-		$namespace = nsname( $classname );	
-			
-		// If this class uses other namespace
-		if( isset($namespace{0}) || $classname{0} == '\\')
-		{
-			// Transform namespsace
-			$old_ns = trim(str_replace( '\\', '_', $namespace ).'_');		
-					
-			// Remove first '_' if left from transforming
-			if( $old_ns{0} == '_') $old_ns = substr( $old_ns, 1);
-			
-			// If this is global NS - remove namespace
-			if( $old_ns == '_' ) $old_ns = '';
-		
-			// Get only class name
-			$newclassname = $old_ns.classname( $classname );
-			
-			//trace('Changing namespace:"'.$namespace.'" to "'.$old_ns.'"');
-		}		
-			
-		// Replace classname in source
-		$replace = str_replace( $classname, $newclassname, $source);
+	/** Transfrom class name with namespace to PHP 5.2 format */
+	private function transformClassName($source, $className, $php, $ns)
+	{
+        // Create copy
+        $nClassName = trim($className);
 
-		//trace('Changing classname"'.htmlentities(trim($classname)).'" with "'.htmlentities(trim($newclassname)).'"');
-		//trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
+        // If this class uses other namespace or in global namespace
+        if (strpos($nClassName, '\\') > 0) {
+            // Transform namespace
+            $nClassName = str_replace('\\', '_', $nClassName);
+
+        } else if ($nClassName{0} == '\\') { // This is global namespace class
+            // Remove first character "\"
+            $nClassName = substr($nClassName, 1);
+
+        } else { // No name space in class name
+            // Create old-styled namespace format
+            $nClassName = str_replace( '\\', '_', $ns ).'_'.$nClassName;
+        }
+
+		// Replace class name in source
+		$replace = str_replace($className, $nClassName, $source);
 			
 		// Replace code
-		$php = str_ireplace( $source, $replace, $php );
-	
+		$php = str_ireplace($source, $replace, $php);
+
+        trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
+        //trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
 		
 		return $php;
 	}
 	
-	/** Change classname to old format without namespace */
-	private function changeClassName( $matches, $php, $ns )
-	{
-		// Iterate all classname usage matches 
+	/** Change class name to old format without namespace */
+	private function changeClassName($matches, $php, $ns)
+	{		// Iterate all class name usage matches
 		for ($i = 0; $i < sizeof($matches[0]); $i++) 
 		{
 			// Get source matching string 
@@ -1117,7 +1102,7 @@ class Compressor extends ExternalModule
 			if( strpos( $classname, '$') !== false ) continue;
 			
 			// Transform class name
-			$php = $this->transformClassName( $source, $classname, $php, $ns );			
+			$php = $this->transformClassName($source, $classname, $php, $ns);
 		}		
 		
 		return $php;
