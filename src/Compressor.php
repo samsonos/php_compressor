@@ -577,17 +577,17 @@ class Compressor extends ExternalModule
  					
  					// Find all class definition 
  					if (preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches)) {
- 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 						$php = $this->changeClassName($matches, $php, $ns );
  					}
  					
  					// Find all instanceof definition
  					if (preg_match_all( '/\s+instanceof\s+(?<classname>[\\\a-z_0-9]+)/i', $php, $matches)) {
- 						$php = $this->changeClassName( $matches, $php, $ns );
+ 						$php = $this->changeClassName($matches, $php, $ns );
  					}
  					 					
  					// Find all interface definition
  					if (preg_match_all( '/(\n|\s)\s*interface\s+(?<classname>[^\s]+)/i', $php, $matches)) {
- 						$php = $this->changeClassName( $matches, $php, $ns ); 						 
+ 						$php = $this->changeClassName($matches, $php, $ns );
  					}
  					
  					// Find all class implements, class can implement many interfaces
@@ -997,29 +997,28 @@ class Compressor extends ExternalModule
 	}
 	
 	/** Change class name to old format without namespace */
-	private function changeClassName($matches, $php, $ns)
-	{		// Iterate all class name usage matches
-		for ($i = 0; $i < sizeof($matches[0]); $i++) 
-		{
-			// Get source matching string 
+	private function changeClassName($matches, $php, $ns, $uses = array())
+	{
+        // Iterate all class name usage matches
+		for ($i = 0; $i < sizeof($matches[0]); $i++) {
+			// Get source matching string
 			$source = $matches[0][$i];
-			
+
 			// Get found classname
-			$classname = & $matches['classname'][$i];
-			
-			// If classname found
-			if( !isset($classname) || !isset($classname{0}) ) continue;
-				
-			// If this is variable
-			if( strpos( $classname, '$') !== false ) continue;
-			
+			$className = & $matches['classname'][$i];
+
+			// If class name found or this is variable
+			if (!isset($className) || !isset($className{0}) || strpos( $className, '$') !== false) {
+                continue;
+            }
+
 			// Transform class name
-			$php = $this->transformClassName($source, $classname, $php, $ns);
-		}		
-		
+			$php = $this->transformClassName($source, $className, $php, $ns, $uses);
+		}
+
 		return $php;
 	}
-	
+
 	/**
 	 * Copy resources	
 	 */
