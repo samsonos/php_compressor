@@ -7,10 +7,10 @@
     <orderEntry type="module-library">
       <library name="PHP">
         <CLASSES>
-          <root url="file://Y:/vendor/samsonos/php" />
+          <root url="file://$MODULE_DIR$/../php_core" />
         </CLASSES>
         <SOURCES>
-          <root url="file://Y:/vendor/samsonos/php" />
+          <root url="file://$MODULE_DIR$/../php_core" />
         </SOURCES>
       </library>
     </orderEntry>

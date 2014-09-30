@@ -701,7 +701,8 @@ class Compressor extends ExternalModule
  					// Find all class extends
  					if( preg_match_all( '/\s+extends\s+(?<classname>[^\s]+)/i', $php, $matches ))
  					{
- 						$php = $this->changeClassName( $matches, $php, $ns ); 							 				
+                        trace('Extends');
+ 						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
  					// Find all class creation
@@ -1051,15 +1052,29 @@ class Compressor extends ExternalModule
 	
 	/** Constructor */
 	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
-	
-	/** Transfrom class name with namespace to PHP 5.2 format */
+
+    /**
+     * Transform class name with namespace to PHP 5.2 format
+     * @param $source
+     * @param $className
+     * @param $php
+     * @param $ns
+     *
+     * @return mixed
+     */
 	private function transformClassName($source, $className, $php, $ns)
 	{
         // Create copy
         $nClassName = trim($className);
 
         // If this class uses other namespace or in global namespace
-        if (strpos($nClassName, '\\') > 0) {
+        if (strrpos($nClassName, '\\') > 0) {
+            // If this is full class name
+            if ($nClassName{0} == '\\') {
+                // Remove global name space character from beginning
+                $nClassName = substr($nClassName, 1);
+            }
+
             // Transform namespace
             $nClassName = str_replace('\\', '_', $nClassName);
 
