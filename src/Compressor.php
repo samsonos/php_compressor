@@ -570,34 +570,28 @@ class Compressor extends ExternalModule
 				
 				// If we does not support namespaces
 				if ($no_ns) {
- 					//trace();
- 					//trace($file); 	
  					// Find all static class usage
- 					if( preg_match_all( '/[\!\.\,\(\s\n\=\:]+\s*(?:self|parent|static|(?<classname>[\\\a-z_0-9]+))::/i', $php, $matches ))
- 					{ 	
- 						$php = $this->changeClassName( $matches, $php, $ns ); 											
+ 					if (preg_match_all( '/[\!\.\,\(\s\n\=\:]+\s*(?:self|parent|static|(?<classname>[\\\a-z_0-9]+))::/i', $php, $matches)) {
+ 						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
  					// Find all class definition 
- 					if( preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches ))
- 					{ 						
+ 					if (preg_match_all( '/(\n|\s)\s*class\s+(?<classname>[^\s]+)/i', $php, $matches)) {
  						$php = $this->changeClassName( $matches, $php, $ns ); 						
  					}
  					
  					// Find all instanceof definition
- 					if( preg_match_all( '/\s+instanceof\s+(?<classname>[\\\a-z_0-9]+)/i', $php, $matches ))
- 					{
+ 					if (preg_match_all( '/\s+instanceof\s+(?<classname>[\\\a-z_0-9]+)/i', $php, $matches)) {
  						$php = $this->changeClassName( $matches, $php, $ns );
  					}
  					 					
  					// Find all interface definition
- 					if( preg_match_all( '/(\n|\s)\s*interface\s+(?<classname>[^\s]+)/i', $php, $matches ))
- 					{
+ 					if (preg_match_all( '/(\n|\s)\s*interface\s+(?<classname>[^\s]+)/i', $php, $matches)) {
  						$php = $this->changeClassName( $matches, $php, $ns ); 						 
  					}
  					
  					// Find all class implements, class can implement many interfaces
- 					if( preg_match_all( '/\s+implements\s+(?<classes>.*)/i', $php, $matches )) {
+ 					if (preg_match_all( '/\s+implements\s+(?<classes>.*)/i', $php, $matches)) {
  						$replace = $matches[0][0];
  						foreach (explode(',', $matches['classes'][0]) as $classname) {
  							$replace = $this->transformClassName($classname, $classname, $replace, $ns);
@@ -607,30 +601,27 @@ class Compressor extends ExternalModule
  					}
  					
  					// Find all class extends
- 					if( preg_match_all( '/\s+extends\s+(?<classname>[^\s]+)/i', $php, $matches ))
- 					{
+ 					if (preg_match_all( '/\s+extends\s+(?<classname>[^\s]+)/i', $php, $matches )) {
  						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
  					// Find all class creation
- 					if( preg_match_all( '/[\.\,\(\s\n=:]+\s*new\s+(?<classname>[^\(]+)\s*\(/i', $php, $matches ))
- 					{
- 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 					if (preg_match_all( '/[\.\,\(\s\n=:]+\s*new\s+(?<classname>[^\(]+)\s*\(/i', $php, $matches)) {
+ 						$php = $this->changeClassName($matches, $php, $ns);
  					}
  					
  					// Find all class hints
- 					if( preg_match_all( '/(\(|\,)\s*(?:array|(?<classname>[\\\a-z_0-9]+))\s*(\&|\$)/i', $php, $matches ))
- 					{ 						
- 						$php = $this->changeClassName( $matches, $php, $ns ); 						
+ 					if (preg_match_all( '/(\(|\,)\s*(?:array|(?<classname>[\\\a-z_0-9]+))\s*(\&|\$)/i', $php, $matches)) {
+ 						$php = $this->changeClassName($matches, $php, $ns);
  					} 		
  					
  					// Replace special word with its value
- 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php ); 					
+ 					$php = str_replace('__NAMESPACE__', '\''.$ns.'\'', $php);
  					
 					$php_code .= $php;
-				}
-				// Just concat file code
-				else $php_code .= $php; 
+				} else { // Just concatenate file code
+                    $php_code .= $php;
+                }
 			}
 			
 			// Close namespace if we support
@@ -1000,8 +991,7 @@ class Compressor extends ExternalModule
 		// Replace code
 		$php = str_ireplace($source, $replace, $php);
 
-        //trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
-        //trace('Replacing "'.htmlentities(trim($source)).'" with "'.htmlentities(trim($replace)).'"');
+        trace('Changing class name('.$ns.')"'.htmlentities(trim($className)).'" with "'.htmlentities(trim($nClassName)).'"');
 		
 		return $php;
 	}
