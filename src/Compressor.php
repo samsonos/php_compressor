@@ -6,7 +6,6 @@ use samson\core\Core;
 use samson\core\iModule;
 use samson\core\File;
 use samson\core\Config;
-use samson\core\ConfigType;
 
 /**
  * Класс для собирания веб-сайта 
@@ -263,7 +262,7 @@ class Compressor extends ExternalModule
         $core = & s();
 
 		// Load production configuration
-		Config::load($core, ConfigType::PRODUCTION);
+		Config::load($core, CONFIG_PROD);
 		
 		// Unload all modules from core that does not implement interface iModuleCompressable
 		foreach ( s()->module_stack as $id => & $m ) 
@@ -473,7 +472,7 @@ class Compressor extends ExternalModule
             define('DEFAULT_LOCALE', 'ru');
         }
 
-        // Add default system locale to them end of core defenition
+        // Add default system locale to them end of core definition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 
         $entryScript = $this->php[self::NS_GLOBAL][$realpath.'index.php'];
@@ -530,13 +529,17 @@ class Compressor extends ExternalModule
         }
 
 		// Remove url_base parsing and put current url base
-		if( preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches ))
-		{
+		if (preg_match('/define\(\'__SAMSON_BASE__\',\s*([^;]+)/i', $index_php, $matches)) {
 			$index_php = str_replace($matches[0], 'define(\'__SAMSON_BASE__\',\''.__SAMSON_BASE__.'\');', $index_php);			
-		}			
-				
-		// Запишем пусковой файл
-		file_put_contents( $this->output.'index.php', '<?php '.$index_php."\n".'?>' );		
+		}
+
+        // Set global constant to specify supported PHP version
+        if (preg_match('/define\s*\(\'__SAMSON_PHP_OLD[^;]+/', $index_php, $matches)) {
+            $index_php = str_replace($matches[0], 'define(\'__SAMSON_PHP_OLD\',\''.($this->view_mode == Core::RENDER_ARRAY).'\');', $index_php);
+        }
+
+        // Запишем пусковой файл
+        file_put_contents( $this->output.'index.php', '<?php '.$index_php."\n".'?>' );
 		
 		// Уберем пробелы, новые строки и комментарии из кода
 		//$php = php_strip_whitespace( $this->output.'index.php' );
