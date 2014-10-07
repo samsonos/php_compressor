@@ -983,7 +983,7 @@ class Compressor extends ExternalModule
 		$replace = str_replace($className, $nClassName, $source);
 
         if(strpos($source, 'm(')) {
-            trace($source, true);
+            //trace($source, true);
         }
 
 		// Replace code
