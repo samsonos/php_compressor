@@ -483,6 +483,14 @@ class Compressor extends ExternalModule
 		// Remove standard framework entry point from index.php	- just preserve default controller
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
 		{
+            /*
+             * Temporary solution to support compressed version, because other way localization does not work,
+             * as chain is broken, first time URL object is created and URL is parsed only after start, so
+             * CMS::afterCompress does not knows what is current locale and does not inject it to all material
+             * queries.
+             */
+            $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'url();';
+
 			$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'s()->start(\''.$matches['default'].'\');';
 		}
 		else e('Default module definition not found - possible errors at compressed version');
