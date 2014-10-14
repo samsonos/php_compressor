@@ -62,6 +62,8 @@ class Compressor extends ExternalModule
     public function __HANDLER($phpVersion = null, $hideErrors = true)
     {
         s()->async(true);
+        
+        ini_set('memory_limit', '256M');
 
         $this->compress( $phpVersion, true, $hideErrors );
     }
