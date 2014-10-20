@@ -183,6 +183,9 @@ class EventCompressor
         // Get all defined handlers
         $handlers = \samson\core\Event::listeners();
 
+        //trace($handlers['core.routing'], true);
+        //trace($this->subscriptions, true);
+
         // Iterate all event fire calls
         foreach ($this->fires as $id => $data) {
             // Collection of actual event handler call for replacement
@@ -192,7 +195,7 @@ class EventCompressor
             $subscriptions = & $this->subscriptions[$id];
             if (isset($subscriptions)) {
                 // Iterate event subscriptions
-                foreach ($subscriptions as $event) {
+                foreach ($subscriptions as &$event) {
                     // If subscriber callback is object method
                     if (isset($event['object'])) {
                         $eventHandlers = & $handlers[$id];
@@ -200,19 +203,29 @@ class EventCompressor
                             // Iterate all handlers
                             foreach ($eventHandlers as $handler) {
                                 $call = '';
+
                                 // Get pointer to object
                                 $object = & $handler[0][0];
-                                // Handler object is module ancestor
-                                //if (in_array('\samson\core\iModule', class_implements($handler[0]))) {
-                                if ($object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
+
+                                // TODO: Not existing dynamic handlers what was excluded from compressed code
+
+                                if(is_object($object)) {
+                                    //trace($event['object'].'-'.get_class($object));
+                                    // Handler object is module ancestor
+                                    if ($object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
+                                        // Build object method call
+                                        $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
+                                    }
+                                } else if(class_exists($object, false)) { // Static class
+                                    //trace($event['object'].'-'.$object);
                                     // Build object method call
-                                    $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
-                                } else if(strpos($event['object'], '(') !== false) { // Other class - create instance of it?
+                                    $call = $event['object'].'::' . $event['method'] . '(';
+                                } else if(strpos($event['object'], '(') !== false) { // Function
                                     // Build object method call
                                     $call = $event['object'].'->' . $event['method'] . '(';
-
-                                    // TODO: Define what to do with other classes, only functions supported
                                 }
+
+                                // TODO: Define what to do with other classes, only functions supported
 
                                 // If we have found correct object
                                 if (isset($call{0})) {
@@ -240,7 +253,7 @@ class EventCompressor
             $input = str_replace($data['source'], implode("\n", $code), $input);
 
             foreach ($code as $replace) {
-                elapsed('Replacing '.$data['source'].' with '.$replace);
+                trace('Replacing '.$data['source'].' with '.$replace);
             }
         }
 
