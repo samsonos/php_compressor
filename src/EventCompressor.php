@@ -216,13 +216,13 @@ class EventCompressor
                                         // Build object method call
                                         $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
                                     }
+                                } else if(strpos($event['object'], '(') !== false) { // Function
+                                    // Build object method call
+                                    $call = $event['object'].'->' . $event['method'] . '(';
                                 } else if(class_exists($object, false)) { // Static class
                                     //trace($event['object'].'-'.$object);
                                     // Build object method call
                                     $call = $event['object'].'::' . $event['method'] . '(';
-                                } else if(strpos($event['object'], '(') !== false) { // Function
-                                    // Build object method call
-                                    $call = $event['object'].'->' . $event['method'] . '(';
                                 }
 
                                 // TODO: Define what to do with other classes, only functions supported
