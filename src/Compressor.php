@@ -1080,7 +1080,7 @@ class Compressor extends ExternalModule
 			$class_name = classname($full_class);				
 			
 			// Check class existance
-			if( !class_exists($full_class, false) && !interface_exists($full_class, false) ) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class );
+			if( !class_exists($full_class) && !interface_exists($full_class) ) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class );
 			
 			// Replace class static call	
 			$code = preg_replace( '/([^\\\a-z])'.$class_name.'::/i', '$1'.$full_class.'::', $code );
