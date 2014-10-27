@@ -36,7 +36,7 @@ class Compressor extends ExternalModule
     public $require = array();
 
     /** Ignored resource extensions */
-    public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'sql', 'xml', 'yml');
+    public $ignored_extensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
 
     /** Ignored resource files */
     public $ignored_resources = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db', 'Thumbs.db');
@@ -433,7 +433,12 @@ class Compressor extends ExternalModule
 			
 			// Copy cached css resource
 			$this->copy_resource( __SAMSON_CWD__.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
-		}		
+		}
+
+        // Copy main project composer.json
+        if (file_exists(__SAMSON_CWD__.'composer.json')) {
+            $this->copy_resource( __SAMSON_CWD__.'composer.json', $this->output.'composer.json');
+        }
 		
 		// Set errors output
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'false':'true').';';
