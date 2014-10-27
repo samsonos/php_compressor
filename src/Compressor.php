@@ -436,8 +436,9 @@ class Compressor extends ExternalModule
 		}
 
         // Copy main project composer.json
-        if (file_exists(__SAMSON_CWD__.'composer.json')) {
-            $this->copy_resource( __SAMSON_CWD__.'composer.json', $this->output.'composer.json');
+        $composerPath = __SAMSON_CWD__.'../composer.json';
+        if (file_exists($composerPath)) {
+            $this->copy_resource($composerPath, $this->output.'composer.json');
         }
 		
 		// Set errors output
