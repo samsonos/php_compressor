@@ -41,6 +41,9 @@ class Compressor extends ExternalModule
     /** Ignored resource files */
     public $ignored_resources = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db', 'Thumbs.db');
 
+    /** @var array Collection of file paths to be ignored by compressor */
+    public $ignoredFiles = array();
+
     /** Папка где размещается исходное веб-приложение */
     public $input = __SAMSON_CWD__;
 
@@ -687,6 +690,7 @@ class Compressor extends ExternalModule
 		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$path.', уже собран' );
 		else if( !is_file($path) )				return elapsed('    ! Файл: '.$path.', не существует' );	
 		else if(strpos($path, 'vendor/autoload.php') !== false) return elapsed('Ignoring composer autoloader: '.$path);
+        else if(in_array($path, $this->ignoredFiles)) { return elapsed('Ignoring file['.$path.'] by configuration');}
 	
 		elapsed('  -- Собираю PHP код из файла: '.$path );
 	
