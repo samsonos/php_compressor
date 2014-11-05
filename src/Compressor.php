@@ -41,6 +41,9 @@ class Compressor extends ExternalModule
     /** Ignored resource files */
     public $ignored_resources = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db', 'Thumbs.db');
 
+    /** @var array Collection of folders to be ignored by compressor */
+    public $ignoredFolders = array('vendor');
+
     /** @var array Collection of file paths to be ignored by compressor */
     public $ignoredFiles = array();
 
@@ -102,8 +105,7 @@ class Compressor extends ExternalModule
             $dst = $this->output.$view_php;
 
             // Copy view file
-            $this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file)
-            {
+            $this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file) {
                 // Write new view content
                 file_put_contents( $dst, $view_html );
             });
@@ -177,14 +179,7 @@ class Compressor extends ExternalModule
 	 * @param string $action Action to perform 
 	 */
 	public function copy_css( $src, $dst, $action )
-	{		
-		// If we must create new CSS resource - delete all old CSS resources
-		if( $action == 'Creating' )	foreach ( File::dir( pathname($dst), 'css' ) as $path) 
-		{
-			File::clear($path);
-			break; // limit to one delete for safety
-		}	
-		
+	{	
 		// Read source file
 		$text = file_get_contents( $src );
 		
@@ -216,13 +211,6 @@ class Compressor extends ExternalModule
 	 */
 	public function copy_js( $src, $dst, $action )
 	{
-		// If we must create new CSS resource - delete all old CSS resources
-		if( $action == 'Creating' )	foreach ( File::dir( pathname($dst), 'js' ) as $path)
-		{
-			File::clear($path);
-			break; // limit to one delete for safety
-		}
-	
 		// Read source file
 		$text = file_get_contents( $src );		
 	
@@ -446,7 +434,11 @@ class Compressor extends ExternalModule
 			$rr = & s()->module_stack['resourcer'];
 
             // Iterate all css and js resources
-            \samson\core\File::clear($this->output, array('js', 'css'));
+            $ignoreFolders = array();
+            foreach($this->ignoredFolders as $folder) {
+                $ignoreFolders[] = $this->output.$folder;
+            }
+            \samson\core\File::clear($this->output, array('js', 'css'), $ignoreFolders);
 						
 			// Copy cached js resource
 			$this->copy_resource( __SAMSON_CWD__.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
