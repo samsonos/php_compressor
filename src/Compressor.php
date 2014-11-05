@@ -384,21 +384,23 @@ class Compressor extends ExternalModule
 
         // Add url base to path
         $this->output .= url()->base();
-		
-		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
-		
-		// Set version correct
-		if( !isset($php_version) ) {
+
+        // Set version correct
+        if( !isset($php_version) ) {
             $php_version = PHP_VERSION;
         }
-				
-		// Define rendering model depending on PHP version
-		if( version_compare( $php_version, '5.3.0', '<' ) ) $this->view_mode = Core::RENDER_ARRAY;
+
+        // Define rendering model depending on PHP version
+        if (version_compare( $php_version, '5.3.0', '<' )) {
+            $this->view_mode = Core::RENDER_ARRAY;
+        }
+		
+		e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
 						
 		// Creating output project folder
         $result = \samson\core\File::mkdir($this->output);
         if ($result) {
-            elapsed('Created output project folder ['.$this->output.']');
+            e('Created output project folder [##]', D_SAMSON_DEBUG, $this->output);
         } else if ($result == -1) {
             return e('Compression failed! Cannot create output project folder [##]', E_SAMSON_CORE_ERROR, $this->output);
         }
