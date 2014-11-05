@@ -150,6 +150,8 @@ class Compressor extends ExternalModule
 			foreach ( $data['php'] as $php ) $this->compress_php( $php, $module, $module_php );
 			// Iterate module controllers php code
 			foreach ( $data['controllers'] as $php ) $this->compress_php( $php, $module, $module_php );
+            // Iterate module controllers php code
+            foreach ( $data['modules'] as $php ) $this->compress_php( $php, $module, $module_php );
 			// Iterate module model php code
 			foreach ( $data['models'] as $php ) $this->compress_php( $php, $module, $module_php );
 			// Iterate module views
