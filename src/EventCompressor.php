@@ -68,7 +68,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
+        $pattern = '/(\\\samson\\\\core\\\\)*Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -247,11 +247,16 @@ class EventCompressor
                         }
                     }
                 }
+
+                // Remove all event subscriptions
+                foreach ($subscriptions as $subscription) {
+                    $input = str_replace($subscription['source'], '/*'.$subscription['source'].'*/', $input);
+                    elapsed('Removing subscription ['.$data['source'].']');
+                }
             }
 
             // Replace Event::fire call with actual handlers
             $input = str_replace($data['source'], implode("\n", $code), $input);
-
             foreach ($code as $replace) {
                 elapsed('Replacing '.$data['source'].' with '.$replace);
             }
