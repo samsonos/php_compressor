@@ -387,23 +387,27 @@ class Compressor extends ExternalModule
 		
 		elapsed('Compressing web-application from: '.$this->input.' to '.$this->output);
 		
-		// !!!BUG!!!
-		if( !isset($php_version) ) $php_version = PHP_VERSION;		
+		// Set version correct
+		if( !isset($php_version) ) {
+            $php_version = PHP_VERSION;
+        }
 				
 		// Define rendering model depending on PHP version
 		if( version_compare( $php_version, '5.3.0', '<' ) ) $this->view_mode = Core::RENDER_ARRAY;
 						
-		// Создадим папку для свернутого сайта
-		if( !file_exists($this->output)) {
-            \samson\core\File::mkdir($this->output);
+		// Creating output project folder
+        $result = \samson\core\File::mkdir($this->output);
+        if ($result) {
+            elapsed('Created output project folder ['.$this->output.']');
+        } else if ($result == -1) {
+            return e('Compression failed! Cannot create output project folder [##]', E_SAMSON_CORE_ERROR, $this->output);
         }
 
 		// Define global views collection
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
 		
 		// Iterate core ns resources collection
-		foreach ( s()->load_module_stack as $id => & $data )
-		{	
+		foreach (s()->load_module_stack as $id => & $data) {
 			// Get module instance				
 			$module = & s()->module_stack[ $id ];
 
