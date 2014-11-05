@@ -127,21 +127,23 @@ class Compressor extends ExternalModule
     public function compress_module(iModule & $module, array & $data)
     {
 		// Идентификатор модуля
-		$id = $module->id();	
-		$module_path = $module->path();
-		
-		elapsed('  - Compressing module: '.$id.' from '.$module_path );
-			
+		$id = $module->id();
+
 		// Сохраним указатель на текущий модуль
 		$this->current = & $module;
 		
 		// Build output module path
 		$module_output_path = $id == 'local' ? '' : $id.'/';
+
+        // Build resource source path
+        $module_path = $id == 'local' ? $module->path().__SAMSON_PUBLIC_PATH : $module->path();
+
+        $this->log('  - Compressing module[##] from [##]', $id, $module_path );
 			
 		// Call special method enabling module personal resource pre-management on compressing
-		if( $module->beforeCompress( $this, $this->php ) !== false )
-		{
-			$this->copy_path_resources( $data['resources'], $module_path, $module_output_path );
+		if( $module->beforeCompress( $this, $this->php ) !== false ) {
+            // Copy all module resources
+			$this->copy_path_resources($data['resources'], $module_path, $module_output_path );
 		
 			// Internal collection of module php code, not views
 			$module_php = array();
@@ -317,7 +319,9 @@ class Compressor extends ExternalModule
      */
 	public function copy_resource( $src, $dst, $handler = null )
 	{
-		if( !file_exists( $src )  ) return e('Cannot copy file - Source file(##) does not exists', E_SAMSON_SNAPSHOT_ERROR, $src );
+		if (!file_exists($src)) {
+            $this->log('Source file [##] not found', $src);
+        }
 		
 		// Action to do
 		$action = null;
@@ -328,15 +332,12 @@ class Compressor extends ExternalModule
 		else if( filemtime( $src ) <> filemtime( $dst ) ) $action = 'Updating';		
 
 		// If we know what to do
-		if( isset( $action ))
-		{
-			elapsed( '  -- '.$action.' file '.$dst.' from '.$src );
-			
-			// Create folder structure if nessesary
-			$dir_path = pathname( $dst );
-			if( !file_exists( $dir_path )) 
-			{
-				elapsed( '  -- Creating folder structure '.$dir_path.' from '.$src );
+		if( isset( $action )) {
+
+			// Create folder structure if necessary
+			$dir_path = dirname($dst);
+			if (!file_exists($dir_path)) {
+                $this->log('   -- Creating folder structure from [##] to [##]', dirname($src), $dir_path);
 				\samson\core\File::mkdir($dir_path);
 			}
 			
@@ -344,6 +345,7 @@ class Compressor extends ExternalModule
 			if( is_callable($handler) ) {
                 call_user_func( $handler, $src, $dst, $action );
             } else { // Copy file
+                $this->log('   -- '.$action.' file from [##] to [##]', $src, $dst);
                 copy($src, $dst);
             }
 			
@@ -405,6 +407,9 @@ class Compressor extends ExternalModule
         } else if ($result == -1) {
             return $this->log('Compression failed! Cannot create output project folder [##]', $this->output);
         }
+
+        // Remove all trailing slashes
+        $this->output = realpath($this->output).'/';
 
         $this->log('[##] Compressing web-application[##] from [##] to [##]',
             $debug ? 'DEBUG' : 'PROD',
@@ -711,15 +716,16 @@ class Compressor extends ExternalModule
         // TODO: Анализатор использования функция и переменных??
 
 		//trace(' + Вошли в функцию:'.$path.'('.$namespace.')');
+        $_path = $path;
 		$path = normalizepath(realpath($path));
 	
 		// Если мы уже подключили данный файл или он не существует
 		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$path.', уже собран' );
-		else if( !is_file($path) )				return elapsed('    ! Файл: '.$path.', не существует' );	
+		else if( !is_file($path) )				return elapsed('    ! Файл: '.$_path.', не существует' );
 		else if(strpos($path, 'vendor/autoload.php') !== false) return elapsed('Ignoring composer autoloader: '.$path);
         else if(in_array(basename($path), $this->ignoredFiles)) { return elapsed('Ignoring file['.$path.'] by configuration');}
-	
-		elapsed('  -- Собираю PHP код из файла: '.$path );
+
+        $this->log('   -- Compressing file [##]', $path);
 	
 		//trace('Чтение файла: '.$path );
 	
@@ -1064,32 +1070,29 @@ class Compressor extends ExternalModule
 	 */
 	private function copy_path_resources( $path_resources, $module_path, $module_output_path )
 	{
-		elapsed(' -> Copying resources from '.$module_path.' to '.$module_output_path );
+		$this->log(' -> Copying resources from [##] to [##]', $module_path, $module_output_path);
 		
 		// Iterate module resources
-		foreach ( $path_resources as $extension => $resources )
-		{
+		foreach ( $path_resources as $extension => $resources )	{
 			// Iterate only allowed resource types
-			if( !in_array( $extension , $this->ignored_extensions ) ) foreach ( $resources as $resource )
-			{
-				// Get only filename
-				$filename = basename( $resource );
-		
-				// Copy only allowed resources
-				if( !in_array( $filename, $this->ignored_resources ) )
-				{
-					// Build relative module resource path
-					$relative_path = str_replace( $module_path, '', $resource );
-		
-					// Build correct destination folder
-					$dst = $this->output.$module_output_path.$relative_path;
-					
-					//trace($resource.'-'.$dst);
-						
-					// Copy/update file if nessesary
-					$this->copy_resource( $resource, $dst );
-				}
-			}
+			if (!in_array( $extension , $this->ignored_extensions)) {
+                foreach ( $resources as $resource ) {
+                    // Get only filename
+                    $filename = basename( $resource );
+
+                    // Copy only allowed resources
+                    if (!in_array( $filename, $this->ignored_resources)) {
+                        // Build relative module resource path
+                        $relative_path = str_replace($module_path, '', $resource);
+
+                        // Build correct destination folder
+                        $dst = $this->output.$module_output_path.$relative_path;
+
+                        // Copy/update file if necessary
+                        $this->copy_resource( $resource, $dst );
+                    }
+                }
+            }
 		}
 	}
 
