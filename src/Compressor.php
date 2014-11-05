@@ -60,18 +60,6 @@ class Compressor extends ExternalModule
     protected $php = array( self::NS_GLOBAL => array() );
 
     /**
-     * Universal controller
-     */
-    public function __HANDLER($phpVersion = null, $hideErrors = true)
-    {
-        s()->async(true);
-        
-        ini_set('memory_limit', '256M');
-
-        $this->compress( $phpVersion, true, $hideErrors );
-    }
-
-    /**
      * Свернуть файл представления
      *
      * @param string  $view_file Полный путь к файлу представления
@@ -369,38 +357,38 @@ class Compressor extends ExternalModule
 	
 	/**
 	 * Compress web-application
-     * @param boolean $no_errors 	Disable errors output
+     * @param boolean $debug 	Disable errors output
 	 * @param string $php_version 	PHP version to support
      */
-	public function compress($no_errors = true, $php_version = PHP_VERSION)
+	public function __HANDLER($debug = false, $php_version = PHP_VERSION)
 	{
+        s()->async(true);
+        ini_set('memory_limit', '256M');
+
         // Check output path
         if (!isset($this->output{0})) {
             return e('Cannot compress web-application from [##] - No output path is specified', E_SAMSON_CORE_ERROR,  $this->input);
         }
 
-        // Set version correct
-        if( !isset($php_version) ) {
-            $php_version = PHP_VERSION;
-        }
-
         // Define rendering model depending on PHP version
-        if (version_compare( $php_version, '5.3.0', '<' )) {
+        if (version_compare($php_version, '5.3.0', '<' )) {
             $this->view_mode = Core::RENDER_ARRAY;
         }
 
         // Add url base to path
         $this->output .= url()->base();
 
-        e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
-						
-		// Creating output project folder
+        // Creating output project folder
         $result = \samson\core\File::mkdir($this->output);
         if ($result) {
             e('Created output project folder [##]', D_SAMSON_DEBUG, $this->output);
         } else if ($result == -1) {
             return e('Compression failed! Cannot create output project folder [##]', E_SAMSON_CORE_ERROR, $this->output);
         }
+
+        e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
+						
+
 
 		// Define global views collection
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
@@ -446,7 +434,7 @@ class Compressor extends ExternalModule
         }
 		
 		// Set errors output
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors == 0?'false':'true').';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($debug == 1?'false':'true').';';
 	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
@@ -563,8 +551,13 @@ class Compressor extends ExternalModule
         }
 
         // Запишем пусковой файл
-        file_put_contents( $this->output.'index.php', '<?php '.$index_php."\n".'?>' );
-		
+        file_put_contents($this->output.'index.php', '<?php '.$index_php."\n".'?>');
+
+        // Minify PHP code if no debug is needed
+        if ($debug) {
+            php_strip_whitespace($this->output.'index.php');
+        }
+
 		// Уберем пробелы, новые строки и комментарии из кода
 		//$php = php_strip_whitespace( $this->output.'index.php' );
 		//file_put_contents( $this->output.'index.php', $php );
