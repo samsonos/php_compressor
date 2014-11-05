@@ -75,7 +75,7 @@ class Compressor extends ExternalModule
         // Build relative path to module view
         $rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
 
-        elapsed('  -- Preparing view: '.$view_file.'('.$rel_path.')' );
+        $this->log('  -- Preparing view[##] from [##]', $view_file, $rel_path);
 
         // Прочитаем файл представления
         $view_html = file_get_contents( $view_file );
@@ -179,7 +179,7 @@ class Compressor extends ExternalModule
 	 * @param string $action Action to perform 
 	 */
 	public function copy_css( $src, $dst, $action )
-	{	
+	{
 		// Read source file
 		$text = file_get_contents( $src );
 		
@@ -262,7 +262,7 @@ class Compressor extends ExternalModule
 				// If module configuration loaded - set module params
 				if( isset( Config::$data[ $id ] ) ) 
 				{
-					elapsed(' -- '.$id.' -> Loading config data');
+					$this->log(' -- [##] -> Loading config data', $id);
 					
 					// Assisgn only own class properties no view data set anymore
 					foreach ( Config::$data[ $id ] as $k => $v) if( property_exists( get_class($m), $k ))	$m->$k = $v;				
@@ -372,6 +372,8 @@ class Compressor extends ExternalModule
      */
 	public function __HANDLER($debug = false, $php_version = PHP_VERSION)
 	{
+        elapsed('Started web-application compression');
+        
         s()->async(true);
         ini_set('memory_limit', '256M');
 
@@ -578,10 +580,6 @@ class Compressor extends ExternalModule
             file_put_contents($this->output.'index.php', php_strip_whitespace($this->output.'index.php'));
         }
 
-		// Уберем пробелы, новые строки и комментарии из кода
-		//$php = php_strip_whitespace( $this->output.'index.php' );
-		//file_put_contents( $this->output.'index.php', $php );
-		
 		elapsed('Site has been successfully compressed to '.$this->output);
 	}		
 	
@@ -712,10 +710,10 @@ class Compressor extends ExternalModule
 		$path = normalizepath(realpath($path));
 	
 		// Если мы уже подключили данный файл или он не существует
-		if( isset( $this->files[ $path ])  ) 	return elapsed('    ! Файл: '.$path.', уже собран' );
-		else if( !is_file($path) )				return elapsed('    ! Файл: '.$_path.', не существует' );
-		else if(strpos($path, 'vendor/autoload.php') !== false) return elapsed('Ignoring composer autoloader: '.$path);
-        else if(in_array(basename($path), $this->ignoredFiles)) { return elapsed('Ignoring file['.$path.'] by configuration');}
+		if( isset( $this->files[ $path ])  ) 	return $this->log('    ! Файл: [##], already compressed', $path);
+		else if( !is_file($path) )				return $this->log('    ! Файл: [##], не существует', $_path );
+		else if(strpos($path, 'vendor/autoload.php') !== false) return $this->log('    Ignoring composer autoloader [##]', $path);
+        else if(in_array(basename($path), $this->ignoredFiles)) { return $this->log('    Ignoring file[##] by configuration', $path);}
 
         $this->log('   -- Compressing file [##]', $path);
 	
@@ -907,8 +905,6 @@ class Compressor extends ExternalModule
 						// Получим путь к подключаемому файлу
 						$file_path = '';
 			
-						//elapsed('Найден подключаемый файл');
-			
 						// Переберем все что иде после комманды подключения файла
 						for ($j = $i+1; $j < sizeof($tokens); $j++)
 						{
@@ -1097,8 +1093,7 @@ class Compressor extends ExternalModule
      * @return bool|mixed|string
      */
 	private function removeUSEStatement( $code, array $classes )
-	{				
-		//elapsed($classes);
+	{
 		// Iterate found use statements
 		foreach ( array_unique($classes) as $full_class )
 		{
