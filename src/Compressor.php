@@ -347,7 +347,7 @@ class Compressor extends ExternalModule
 			if( !file_exists( $dir_path )) 
 			{
 				elapsed( '  -- Creating folder structure '.$dir_path.' from '.$src );
-				mkdir( $dir_path, 0775, true );
+				\samson\core\File::mkdir($dir_path);
 			}
 			
 			// If file handler specified 
@@ -394,7 +394,9 @@ class Compressor extends ExternalModule
 		if( version_compare( $php_version, '5.3.0', '<' ) ) $this->view_mode = Core::RENDER_ARRAY;
 						
 		// Создадим папку для свернутого сайта
-		if( !file_exists($this->output)) mkdir( $this->output, 0775, true );	
+		if( !file_exists($this->output)) {
+            \samson\core\File::mkdir($this->output);
+        }
 
 		// Define global views collection
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
@@ -435,7 +437,7 @@ class Compressor extends ExternalModule
 		}
 
         // Copy main project composer.json
-        $composerPath = __SAMSON_CWD__.'../composer.json';
+        $composerPath = __SAMSON_CWD__.'composer.json';
         if (file_exists($composerPath)) {
             $this->copy_resource($composerPath, $this->output.'composer.json');
         }
