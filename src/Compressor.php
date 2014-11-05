@@ -369,13 +369,10 @@ class Compressor extends ExternalModule
 	
 	/**
 	 * Compress web-application
-	 * 
+     * @param boolean $no_errors 	Disable errors output
 	 * @param string $php_version 	PHP version to support
-	 * @param boolean $minify_php 	Remove comments new lines and multiple spaces in PHP
-	 * @param boolean $no_errors 	Disable errors output
-	 *
-	 */
-	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = false  )
+     */
+	public function compress($no_errors = true, $php_version = PHP_VERSION)
 	{
 		// If no output path specified 
 		if (!isset($this->output)) {
@@ -449,7 +446,7 @@ class Compressor extends ExternalModule
         }
 		
 		// Set errors output
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors?'false':'true').';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($no_errors == 0?'false':'true').';';
 	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
