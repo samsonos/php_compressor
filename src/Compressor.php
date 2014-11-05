@@ -75,7 +75,7 @@ class Compressor extends ExternalModule
         // Build relative path to module view
         $rel_path  = ($module->id()=='local'?'':$module->id().'/').str_replace( $module->path(), '', $view_file);
 
-        $this->log('  -- Preparing view[##] from [##]', $view_file, $rel_path);
+        $this->log('  -- Preparing view[##] relative path [##]', $view_file, $rel_path);
 
         // Прочитаем файл представления
         $view_html = file_get_contents( $view_file );
@@ -373,7 +373,7 @@ class Compressor extends ExternalModule
 	public function __HANDLER($debug = false, $php_version = PHP_VERSION)
 	{
         elapsed('Started web-application compression');
-        
+
         s()->async(true);
         ini_set('memory_limit', '256M');
 
