@@ -354,6 +354,12 @@ class Compressor extends ExternalModule
             }
 		}
 	}
+
+    /** Controller action for compressing debug version of web-application */
+    public function __debug()
+    {
+        $this->__HANDLER(true);
+    }
 	
 	/**
 	 * Compress web-application
@@ -386,9 +392,12 @@ class Compressor extends ExternalModule
             return e('Compression failed! Cannot create output project folder [##]', E_SAMSON_CORE_ERROR, $this->output);
         }
 
-        e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
-						
-
+        e('[##] Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array(
+            $debug ? 'DEBUG' : 'PROD',
+            $php_version,
+            $this->input,
+            $this->output
+        ));
 
 		// Define global views collection
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
@@ -434,7 +443,7 @@ class Compressor extends ExternalModule
         }
 		
 		// Set errors output
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($debug == 1?'false':'true').';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($debug == 0?'false':'true').';';
 	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
@@ -554,8 +563,8 @@ class Compressor extends ExternalModule
         file_put_contents($this->output.'index.php', '<?php '.$index_php."\n".'?>');
 
         // Minify PHP code if no debug is needed
-        if ($debug) {
-            php_strip_whitespace($this->output.'index.php');
+        if (!$debug) {
+            file_put_contents($this->output.'index.php', php_strip_whitespace($this->output.'index.php'));
         }
 
 		// Уберем пробелы, новые строки и комментарии из кода
