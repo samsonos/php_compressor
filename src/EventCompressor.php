@@ -250,7 +250,7 @@ class EventCompressor
 
                 // Remove all event subscriptions
                 foreach ($subscriptions as $subscription) {
-                    $input = str_replace($subscription['source'], '/*'.$subscription['source'].'*/', $input);
+                    $input = str_replace($subscription['source'], '', $input);
                     elapsed('Removing subscription ['.$data['source'].']');
                 }
             }
