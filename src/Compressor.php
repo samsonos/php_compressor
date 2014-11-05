@@ -374,13 +374,10 @@ class Compressor extends ExternalModule
      */
 	public function compress($no_errors = true, $php_version = PHP_VERSION)
 	{
-		// If no output path specified 
-		if (!isset($this->output)) {
-			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']);
-		}
-
-        // Add url base to path
-        $this->output .= url()->base();
+        // Check output path
+        if (!isset($this->output{0})) {
+            return e('Cannot compress web-application from [##] - No output path is specified', E_SAMSON_CORE_ERROR,  $this->input);
+        }
 
         // Set version correct
         if( !isset($php_version) ) {
@@ -391,8 +388,11 @@ class Compressor extends ExternalModule
         if (version_compare( $php_version, '5.3.0', '<' )) {
             $this->view_mode = Core::RENDER_ARRAY;
         }
-		
-		e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
+
+        // Add url base to path
+        $this->output .= url()->base();
+
+        e('Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array($php_version, $this->input, $this->output));
 						
 		// Creating output project folder
         $result = \samson\core\File::mkdir($this->output);
