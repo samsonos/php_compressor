@@ -360,6 +360,18 @@ class Compressor extends ExternalModule
     {
         $this->__HANDLER(true);
     }
+
+    /** Generic log function for further modification */
+    protected function log($message)
+    {
+        // Get passed vars
+        $vars = func_get_args();
+        // Remove first message var
+        array_shift($vars);
+
+        // Render debug message
+        return e($message, D_SAMSON_DEBUG, $vars);
+    }
 	
 	/**
 	 * Compress web-application
@@ -373,7 +385,7 @@ class Compressor extends ExternalModule
 
         // Check output path
         if (!isset($this->output{0})) {
-            return e('Cannot compress web-application from [##] - No output path is specified', E_SAMSON_CORE_ERROR,  $this->input);
+            return $this->log('Cannot compress web-application from [##] - No output path is specified', $this->input);
         }
 
         // Define rendering model depending on PHP version
@@ -387,17 +399,17 @@ class Compressor extends ExternalModule
         // Creating output project folder
         $result = \samson\core\File::mkdir($this->output);
         if ($result) {
-            e('Created output project folder [##]', D_SAMSON_DEBUG, $this->output);
+            $this->log('Created output project folder [##]', $this->output);
         } else if ($result == -1) {
-            return e('Compression failed! Cannot create output project folder [##]', E_SAMSON_CORE_ERROR, $this->output);
+            return $this->log('Compression failed! Cannot create output project folder [##]', $this->output);
         }
 
-        e('[##] Compressing web-application[##] from [##] to [##]', D_SAMSON_DEBUG, array(
+        $this->log('[##] Compressing web-application[##] from [##] to [##]',
             $debug ? 'DEBUG' : 'PROD',
             $php_version,
             $this->input,
             $this->output
-        ));
+        );
 
 		// Define global views collection
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
@@ -443,7 +455,7 @@ class Compressor extends ExternalModule
         }
 		
 		// Set errors output
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.($debug == 0?'false':'true').';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.(!$debug?'false':'true').';';
 	
 		// Add global base64 serialized core string
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
