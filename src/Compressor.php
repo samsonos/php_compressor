@@ -376,13 +376,9 @@ class Compressor extends ExternalModule
 	 *
 	 */
 	public function compress( $php_version = PHP_VERSION, $minify_php = true, $no_errors = false  )
-	{			
-		// Get realpath to web application
-		$realpath = s()->path();
-		
+	{
 		// If no output path specified 
-		if( !isset($this->output) )
-		{
+		if (!isset($this->output)) {
 			$this->output = str_replace( $_SERVER['HTTP_HOST'], 'final.'.$_SERVER['HTTP_HOST'], $_SERVER['DOCUMENT_ROOT']);
 		}
 
@@ -427,6 +423,9 @@ class Compressor extends ExternalModule
 		if (isset( s()->module_stack['resourcer'] )) {
 			// Link
 			$rr = & s()->module_stack['resourcer'];
+
+            // Iterate all css and js resources
+            \samson\core\File::clear($this->output, array('js', 'css'));
 						
 			// Copy cached js resource
 			$this->copy_resource( __SAMSON_CWD__.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
@@ -461,12 +460,11 @@ class Compressor extends ExternalModule
         $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'setlocales( '.implode(',',$locale_str).');';
 
         // TODO: add generic handlers to modules to provide compressing logic for each module
-        // TODO: add generic constants namespace to put all constants defenition there - and put only defined constrat and redeclare them
+        // TODO: add generic constants namespace to put all constants definition there - and put only defined constrat and redeclare them
 
+        // TODO: WTF???? Thi must be local module logic
 		// If this is remote web-app - collect local resources
-		if( __SAMSON_REMOTE_APP )
-		{
-            // TODO: WTF???? Thi must be local module logic
+		if( __SAMSON_REMOTE_APP ) {
             // Gather all resources
 			$path = __SAMSON_CWD__;
             $ls = array();
@@ -486,14 +484,16 @@ class Compressor extends ExternalModule
         // Add default system locale to them end of core definition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 
-        $entryScript = $this->php[self::NS_GLOBAL][$realpath.'index.php'];
-        $eventCompressor = new EventCompressor();
+        // Pointer to entry script code
+        $entryScriptPath = __SAMSON_CWD__.__SAMSON_PUBLIC_PATH.'index.php';
+        $entryScript = & $this->php[self::NS_GLOBAL][$entryScriptPath];
+
         // Collect all event system data
+        $eventCompressor = new EventCompressor();
         $eventCompressor->collect($entryScript);
 		
 		// Remove standard framework entry point from index.php	- just preserve default controller
-		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ], $matches ))
-		{
+		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $entryScript, $matches )) {
             /*
              * Temporary solution to support compressed version, because other way localization does not work,
              * as chain is broken, first time URL object is created and URL is parsed only after start, so
@@ -507,7 +507,7 @@ class Compressor extends ExternalModule
 		else e('Default module definition not found - possible errors at compressed version');
 		
 		// Clear default entry point
-		$this->php[ self::NS_GLOBAL ][ $realpath.'index.php' ] = '';
+        unset($this->php[self::NS_GLOBAL][$entryScriptPath]);
 
 		// Set global namespace as last
 		$global_ns = $this->php[ self::NS_GLOBAL ];

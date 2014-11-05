@@ -253,7 +253,7 @@ class EventCompressor
             $input = str_replace($data['source'], implode("\n", $code), $input);
 
             foreach ($code as $replace) {
-                trace('Replacing '.$data['source'].' with '.$replace);
+                elapsed('Replacing '.$data['source'].' with '.$replace);
             }
         }
 
