@@ -383,6 +383,7 @@ class Compressor extends ExternalModule
         }
 
         // Define rendering model depending on PHP version
+        $php_version = isset($php_version) ? $php_version : PHP_VERSION;
         if (version_compare($php_version, '5.3.0', '<' )) {
             $this->view_mode = Core::RENDER_ARRAY;
         }
