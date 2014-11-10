@@ -243,7 +243,7 @@ class EventCompressor
                         if (strpos($event['method'], '$') === false) {
                             $code[] = $event['method'] . '(' . implode(', ', $data['params']) . ');';
                         } else {
-                            elapsed('Cannot replace event fire method with "'.$event['method'].'" - variables not supported');
+                            $this->log('Cannot replace event fire method with [##] - variables not supported', $event['method']);
                         }
                     }
                 }
@@ -251,14 +251,14 @@ class EventCompressor
                 // Remove all event subscriptions
                 foreach ($subscriptions as $subscription) {
                     $input = str_replace($subscription['source'], '', $input);
-                    elapsed('Removing subscription ['.$data['source'].']');
+                    $this->log('Removing subscription [##]', $data['source']);
                 }
             }
 
             // Replace Event::fire call with actual handlers
             $input = str_replace($data['source'], implode("\n", $code), $input);
             foreach ($code as $replace) {
-                elapsed('Replacing '.$data['source'].' with '.$replace);
+                $this->log('Replacing [##] with [##]', $data['source'], $replace);
             }
         }
 
@@ -266,5 +266,17 @@ class EventCompressor
         $output = $input;
 
         return true;
+    }
+
+    /** Generic log function for further modification */
+    protected function log($message)
+    {
+        // Get passed vars
+        $vars = func_get_args();
+        // Remove first message var
+        array_shift($vars);
+
+        // Render debug message
+        return e($message, D_SAMSON_DEBUG, $vars);
     }
 }
