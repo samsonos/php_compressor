@@ -362,7 +362,8 @@ class Compressor extends ExternalModule
         array_shift($vars);
 
         // Render debug message
-        return e($message, D_SAMSON_DEBUG, $vars);
+        //return e($message, D_SAMSON_DEBUG, $vars);
+        return trace(debug_parse_markers($message, $vars));
     }
 	
 	/**
@@ -383,7 +384,7 @@ class Compressor extends ExternalModule
         }
 
         // Define rendering model depending on PHP version
-        $php_version = isset($php_version) ? $php_version : PHP_VERSION;
+        $php_version = isset($php_version{0}) ? $php_version : PHP_VERSION;
         if (version_compare($php_version, '5.3.0', '<' )) {
             $this->view_mode = Core::RENDER_ARRAY;
         }
@@ -544,7 +545,7 @@ class Compressor extends ExternalModule
 		
 		// Соберем коллекцию загруженных классов их файлов по пространствам имен
 		$this->classes_to_ns_files( get_declared_classes(), $classes );
-				
+
 		// Исправим порядок файлов
 		foreach ( $this->php as $ns => & $files )
 		{					
