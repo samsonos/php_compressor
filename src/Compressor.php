@@ -501,6 +501,9 @@ class Compressor extends ExternalModule
         // Add default system locale to them end of core definition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 
+        // Add generic composer auto loader require
+        $this->php['samson\core'][ self::VIEWS ] = "\n".'if(file_exists("vendor/autoload.php")) require "vendor/autoload.php";';
+
         // Pointer to entry script code
         $entryScriptPath = __SAMSON_CWD__.__SAMSON_PUBLIC_PATH.'index.php';
         $entryScript = & $this->php[self::NS_GLOBAL][$entryScriptPath];
