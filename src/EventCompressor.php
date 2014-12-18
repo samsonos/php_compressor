@@ -277,6 +277,6 @@ class EventCompressor
         array_shift($vars);
 
         // Render debug message
-        return e($message, D_SAMSON_DEBUG, $vars);
+        return trace($message, D_SAMSON_DEBUG, $vars);
     }
 }
