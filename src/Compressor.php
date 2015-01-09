@@ -4,8 +4,6 @@ namespace samsonos\compressor;
 use samson\core\ExternalModule;
 use samson\core\Core;
 use samson\core\iModule;
-use samson\core\File;
-use samson\core\Config;
 
 /**
  * Класс для собирания веб-сайта 
@@ -61,6 +59,9 @@ class Compressor extends ExternalModule
 
     /** Collection for storing all php code by namespace */
     protected $php = array( self::NS_GLOBAL => array() );
+
+    /** @var string Web-application environment identifier */
+    protected $environment = 'prod';
 
     /**
      * Свернуть файл представления
@@ -246,38 +247,28 @@ class Compressor extends ExternalModule
         // Get core pointer
         $core = & s();
 
-		// Load production configuration
-		Config::load($core, CONFIG_PROD);
-		
-		// Unload all modules from core that does not implement interface iModuleCompressable
-		foreach ( s()->module_stack as $id => & $m ) 
-		{
-			if ( !( is_a( $m, ns_classname( 'iModuleCompressable', 'samson\core')))) 
-			{
-				s()->unload( $id );
+        // Switch to production environment
+        $core->environment('prod');
 
-			}
-			else
-			{
-				// If module configuration loaded - set module params
-				if( isset( Config::$data[ $id ] ) ) 
-				{
-					$this->log(' -- [##] -> Loading config data', $id);
-					
-					// Assisgn only own class properties no view data set anymore
-					foreach ( Config::$data[ $id ] as $k => $v) if( property_exists( get_class($m), $k ))	$m->$k = $v;				
-				}				
-			}
+		// Unload all modules from core that does not implement interface iModuleCompressable
+		foreach ( s()->module_stack as $id => & $m ) {
+            // Unload modules that is not compressable
+			if (!(is_a($m, ns_classname( 'iModuleCompressable', 'samson\core')))) {
+				s()->unload( $id );
+			} else { // Reconfigure module
+                \samson\core\Event::fire('core.module.configure', array(&$m, $id));
+                $this->log(' -- [##] -> Loading config data', $id);
+            }
 		}
 		
 		// Set core rendering model
-		s()->render_mode = $this->view_mode;
+        $id->render_mode = $this->view_mode;
 		
 		// Change system path to relative type
-		s()->path('');
+        $id->path('');
 		
 		// Create serialized copy
-		$core_code = serialize(s());
+		$core_code = serialize($id);
 		
 		// If no namespaces 
 		if ($no_ns) {
@@ -348,9 +339,9 @@ class Compressor extends ExternalModule
 	}
 
     /** Controller action for compressing debug version of web-application */
-    public function __debug()
+    public function __debug($environment = '')
     {
-        $this->__HANDLER(true);
+        $this->__HANDLER(true, $environment);
     }
 
     /** Generic log function for further modification */
@@ -371,9 +362,12 @@ class Compressor extends ExternalModule
      * @param boolean $debug 	Disable errors output
 	 * @param string $php_version 	PHP version to support
      */
-	public function __HANDLER($debug = false, $php_version = PHP_VERSION)
+	public function __HANDLER($debug = false, $environment = 'prod', $php_version = PHP_VERSION)
 	{
-        elapsed('Started web-application compression');
+        // Set compressed project environment
+        $this->environment = $environment;
+
+        elapsed('Started web-application compression['.$this->environment.']');
 
         s()->async(true);
         ini_set('memory_limit', '256M');
