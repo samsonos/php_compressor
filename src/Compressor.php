@@ -28,7 +28,7 @@ class Compressor extends ExternalModule
     const VIEWS = 'views';
 
     /** Output path for compressed web application */
-    public $output = '/out/';
+    public $output = 'out/';
 
     /** Collection of requires to insert in compressed file */
     public $require = array();
@@ -251,10 +251,10 @@ class Compressor extends ExternalModule
         $core->environment('prod');
 
 		// Unload all modules from core that does not implement interface iModuleCompressable
-		foreach ( s()->module_stack as $id => & $m ) {
+		foreach ($core->module_stack as $id => & $m) {
             // Unload modules that is not compressable
 			if (!(is_a($m, ns_classname( 'iModuleCompressable', 'samson\core')))) {
-				s()->unload( $id );
+                $core->unload( $id );
 			} else { // Reconfigure module
                 \samson\core\Event::fire('core.module.configure', array(&$m, $id));
                 $this->log(' -- [##] -> Loading config data', $id);
@@ -262,13 +262,13 @@ class Compressor extends ExternalModule
 		}
 		
 		// Set core rendering model
-        $id->render_mode = $this->view_mode;
+        $core->render_mode = $this->view_mode;
 		
 		// Change system path to relative type
-        $id->path('');
+        $core->path('');
 		
 		// Create serialized copy
-		$core_code = serialize($id);
+		$core_code = serialize($core);
 		
 		// If no namespaces 
 		if ($no_ns) {
@@ -397,8 +397,9 @@ class Compressor extends ExternalModule
         // Remove all trailing slashes
         $this->output = realpath($this->output).'/';
 
-        $this->log('[##] Compressing web-application[##] from [##] to [##]',
-            $debug ? 'DEBUG' : 'PROD',
+        $this->log('[##]## Compressing web-application[##] from [##] to [##]',
+            $environment,
+            $debug ? '[DEBUG]' : '',
             $php_version,
             $this->input,
             $this->output
