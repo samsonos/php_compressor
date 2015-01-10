@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/samsonos/php_compressor.png?label=ready&title=Ready)](https://waffle.io/samsonos/php_compressor)
 Compressor # SamsonPHP 
 
 Exclusive module which differs this PHP framework among all others,
