@@ -1,4 +1,6 @@
-Compressor # SamsonPHP 
+# SamsonPHP Compressor
+
+[![Stories in Ready](https://badge.waffle.io/samsonos/php_compressor.png?label=ready&title=Ready)](https://waffle.io/samsonos/php_compressor)
 
 Exclusive module which differs this PHP framework among all others,
 
