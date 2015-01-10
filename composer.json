@@ -1,5 +1,6 @@
 {
     "name":"samsonos/php_compressor",
+    "description":"SamsonPHP automatic code compressor|generator|optimizer",
     "authors":[
         {
             "name":"Vitaly Iegorov",
