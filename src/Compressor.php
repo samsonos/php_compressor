@@ -6,16 +6,11 @@ use samson\core\Core;
 use samson\core\iModule;
 
 /**
- * Класс для собирания веб-сайта 
+ * Module for automatic code optimization|compression
  *
- * @package SamsonPHP
- * @author Vitaly Iegorov <vitalyiegorov@gmail.com>
- * @version 1.0
+ * @package samsonos\compressor
+ * @author Vitaly Iegorov <egorov@samsonos.com>
  */
-// TODO: Интегрировать обратку представлений внутри шаблона а не дублировать одинаковый код
-// TODO: Анализатор классов которые добавляются, а вдруг они вообще не нужны?
-// TODO: Собирать "голый" код отдельно для его цельного выполнения
-// TODO: Обработка NS {} c фигурными скобками
 class Compressor extends ExternalModule
 {
     /** Идентификатор модуля */
@@ -167,7 +162,7 @@ class Compressor extends ExternalModule
 		$module->afterCompress( $this, $this->php );
 		
 		// Gather all code in to global code collection with namespaces
-		$this->code_array_combine( $module_php, $this->php );
+		$this->code_array_combine($module_php, $this->php);
 		
 		// Change module path
 		$module->path( $id.'/' );
@@ -539,16 +534,18 @@ class Compressor extends ExternalModule
 		$classes = array();
 		
 		// Соберем коллекцию загруженных интерфейсов их файлов по пространствам имен
-		$this->classes_to_ns_files( get_declared_interfaces(), $classes ); 
+		$this->classes_to_ns_files(get_declared_interfaces(), $classes);
 		
 		// Соберем коллекцию загруженных классов их файлов по пространствам имен
-		$this->classes_to_ns_files( get_declared_classes(), $classes );
+		$this->classes_to_ns_files(get_declared_classes(), $classes);
 
-		// Исправим порядок файлов
-		foreach ( $this->php as $ns => & $files )
-		{					
-			// Изменим порядок элементов в массиве файлов на правильный для конкретного NS
-			if( isset( $classes [ $ns ] ) ) $files = array_merge( $classes [ $ns ], $files );			 			
+		// Fix OOP entities
+		foreach ($this->php as $ns => & $files) {
+			// If this namespace has been loaded
+			if (isset($classes[$ns])) {
+                // Fill namespace entities, make OOP entities correct order
+                $files = array_merge($classes[$ns], $files);
+            }
 		}		
 		
 		// Соберем весь PHP код в один файл
@@ -716,6 +713,9 @@ class Compressor extends ExternalModule
         else if(in_array(basename($path), $this->ignoredFiles)) { return $this->log('    Ignoring file[##] by configuration', $path);}
 
         $this->log('   -- Compressing file [##]', $path);
+
+        // Load file
+        require_once($path);
 	
 		//trace('Чтение файла: '.$path );
 	
@@ -1095,8 +1095,7 @@ class Compressor extends ExternalModule
 	private function removeUSEStatement( $code, array $classes )
 	{
 		// Iterate found use statements
-		foreach ( array_unique($classes) as $full_class )
-		{
+		foreach (array_unique($classes) as $full_class) {
 			// Get class shortcut
 			$class_name = classname($full_class);				
 			
@@ -1129,22 +1128,22 @@ class Compressor extends ExternalModule
 	 * @param array $collection Коллекция имен классов
 	 * @param array $classes	Коллекция для возврата результатов
 	 */
-	private function classes_to_ns_files( $collection, & $classes = array() )
+	private function classes_to_ns_files($collection, & $classes = array())
 	{		
 		// Соберем коллекцию загруженных интерфейсов их файлов по пространствам имен
-		foreach ( $collection as $class )
-		{
+		foreach ( $collection as $class ) {
 			$ac = new \ReflectionClass( $class );
 			
 			$ns = $ac->getNamespaceName();
 				
-			if( $ns != '')
-			{
+			if ($ns != '') {
 				$ns = strtolower($ns);
 				
-				if( !isset( $classes[ $ns ]) ) $classes[ $ns ] = array();
+				if (!isset($classes[$ns])) {
+                    $classes[ $ns ] = array();
+                }
 					
-				$classes[ $ns ][ normalizepath($ac->getFileName()) ] = '';
+				$classes[$ns][normalizepath($ac->getFileName())] = '';
 			}
 		}
 	}
