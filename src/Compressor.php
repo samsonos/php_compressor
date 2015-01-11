@@ -529,10 +529,8 @@ class Compressor extends ExternalModule
 		unset( $this->php[ self::NS_GLOBAL ][ self::VIEWS ] );
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = $s;
 
-		// Исправим порядок следования файлов в модуле на правильный
-		// т.к. в PHP описание классов должно идти строго по порядку 
+		// Load all OOP entities
 		$classes = array();
-		
 		// Соберем коллекцию загруженных интерфейсов их файлов по пространствам имен
 		$this->classes_to_ns_files(get_declared_interfaces(), $classes);
 		
