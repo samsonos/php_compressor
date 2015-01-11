@@ -68,7 +68,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/(\\\samson\\\\core\\\\)*Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
+        $pattern = '/(samson_core_|\\\samson\\\\core\\\\)*Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -196,6 +196,7 @@ class EventCompressor
             if (isset($subscriptions)) {
                 // Iterate event subscriptions
                 foreach ($subscriptions as &$event) {
+                    $this->log('Analyzing event subscription[##]', $id);
                     // If subscriber callback is object method
                     if (isset($event['object'])) {
                         $eventHandlers = & $handlers[$id];
@@ -209,18 +210,16 @@ class EventCompressor
 
                                 // TODO: Not existing dynamic handlers what was excluded from compressed code
 
-                                if(is_object($object)) {
-                                    //trace($event['object'].'-'.get_class($object));
-                                    // Handler object is module ancestor
-                                    if ($object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
-                                        // Build object method call
-                                        $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
-                                    }
+                                if(is_object($object) && $object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
+                                    // Build object method call
+                                    $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
+                                    $this->log('   - Replacing event fire[##] with object function call [##]', $id, $call);
                                 } else if(strpos($event['object'], '(') !== false) { // Function
                                     // Build object method call
                                     $call = $event['object'].'->' . $event['method'] . '(';
                                 } else if(class_exists($object, false)) { // Static class
                                     //trace($event['object'].'-'.$object);
+
                                     // Build object method call
                                     $call = $event['object'].'::' . $event['method'] . '(';
                                 }
@@ -236,12 +235,16 @@ class EventCompressor
 
                                     // Gather object calls
                                     $code[] = $call . ');';
+                                } else {
+                                    $this->log(' - Cannot replace event fire[##] with [##] - [##]', $id, $event['object'], $event['method']);
                                 }
                             }
                         }
                     } else { // Global function
                         if (strpos($event['method'], '$') === false) {
-                            $code[] = $event['method'] . '(' . implode(', ', $data['params']) . ');';
+                            $call = $event['method'] . '(' . implode(', ', $data['params']) . ');';
+                            $code[] = $call;
+                            $this->log(' - Replacing event fire[##] with function call [##]', $id, $call);
                         } else {
                             $this->log('Cannot replace event fire method with [##] - variables not supported', $event['method']);
                         }
@@ -277,6 +280,6 @@ class EventCompressor
         array_shift($vars);
 
         // Render debug message
-        return trace($message, D_SAMSON_DEBUG, $vars);
+        return trace(debug_parse_markers($message, $vars));
     }
 }

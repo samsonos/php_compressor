@@ -348,7 +348,6 @@ class Compressor extends ExternalModule
         array_shift($vars);
 
         // Render debug message
-        //return e($message, D_SAMSON_DEBUG, $vars);
         return trace(debug_parse_markers($message, $vars));
     }
 	
