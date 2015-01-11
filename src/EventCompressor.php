@@ -214,10 +214,10 @@ class EventCompressor
                                     // Build object method call
                                     $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
                                     $this->log('   - Replacing event fire[##] with object function call [##]', $id, $call);
-                                } else if(strpos($event['object'], '(') !== false) { // Function
+                                } elseif (strpos($event['object'], '(') !== false) { // Function
                                     // Build object method call
                                     $call = $event['object'].'->' . $event['method'] . '(';
-                                } else if(class_exists($object, false)) { // Static class
+                                } elseif (is_string($object) && class_exists($object, false)) { // Static class
                                     //trace($event['object'].'-'.$object);
 
                                     // Build object method call
