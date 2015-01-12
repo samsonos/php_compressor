@@ -53,7 +53,7 @@ class Compressor extends ExternalModule
     protected $files = array();
 
     /** Collection for storing all php code by namespace */
-    protected $php = array( self::NS_GLOBAL => array() );
+    private $php = array( self::NS_GLOBAL => array() );
 
     /** @var string Web-application environment identifier */
     protected $environment = 'prod';
