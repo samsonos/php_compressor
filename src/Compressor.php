@@ -53,7 +53,7 @@ class Compressor extends ExternalModule
     protected $files = array();
 
     /** Collection for storing all php code by namespace */
-    protected $php = array( self::NS_GLOBAL => array() );
+    private $php = array( self::NS_GLOBAL => array() );
 
     /** @var string Web-application environment identifier */
     protected $environment = 'prod';
@@ -348,7 +348,6 @@ class Compressor extends ExternalModule
         array_shift($vars);
 
         // Render debug message
-        //return e($message, D_SAMSON_DEBUG, $vars);
         return trace(debug_parse_markers($message, $vars));
     }
 	
