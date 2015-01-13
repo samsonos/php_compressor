@@ -85,11 +85,11 @@ class Compressor extends ExternalModule
         $view_html = Minify_HTML::minify($view_html);
 
         // Fire event to render view correctly
-        \samson\core\Event::fire('core.render', array(&$view_html, array(), &$module));
+        \samsonphp\event\Eventt::fire('core.render', array(&$view_html, array(), &$module));
 
         // Template re-rendering
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
-        \samson\core\Event::fire('core.rendered', array(&$view_html, array(), &$this));
+        \samsonphp\event\Event::fire('core.rendered', array(&$view_html, array(), &$this));
 
         // If rendering from array
         if( $this->view_mode == Core::RENDER_ARRAY )
@@ -251,7 +251,7 @@ class Compressor extends ExternalModule
 			if (!(is_a($m, ns_classname( 'iModuleCompressable', 'samson\core')))) {
                 $core->unload( $id );
 			} else { // Reconfigure module
-                \samson\core\Event::fire('core.module.configure', array(&$m, $id));
+                \samsonphp\event\Event::fire('core.module.configure', array(&$m, $id));
                 $this->log(' -- [##] -> Loading config data', $id);
             }
 		}

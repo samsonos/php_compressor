@@ -181,7 +181,7 @@ class EventCompressor
         //$this->collect($input);
 
         // Get all defined handlers
-        $handlers = \samson\core\Event::listeners();
+        $handlers = \samsonphp\event\Event::listeners();
 
         //trace($handlers['core.routing'], true);
         //trace($this->subscriptions, true);
