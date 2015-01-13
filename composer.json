@@ -9,7 +9,7 @@
     ],
     "minimum-stability" :"dev",
     "require":{
-        "samsonos/php_event":"1.*",
+        "samsonphp/event":"1.*",
         "samsonos/php_core":"1.*",
         "samsonos/php_resourcer":"*"
     },
