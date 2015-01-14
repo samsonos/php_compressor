@@ -68,7 +68,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/(samson_core_|\\\samson\\\\core\\\\)*Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
+        $pattern = '/(\\\\samsonphp\\\\event\\\\|samson_core_|\\\samson\\\\core\\\\)*Event::subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -95,7 +95,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/(samson_core_|\\\samson\\\core\\\)?Event::(fire|signal)\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
+        $pattern = '/(\\\\samsonphp\\\\event\\\\|samson_core_|\\\samson\\\core\\\)?Event::(fire|signal)\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
