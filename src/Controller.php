@@ -26,7 +26,7 @@ class Controller extends Service
     /** Module init */
     public function init(array $params = array())
     {
-        Event::subscribe('core.rendered', array($this, 'panelRenderer'));
+        //Event::subscribe('core.rendered', array($this, 'panelRenderer'));
     }
 
     /**
