@@ -37,7 +37,7 @@ class Controller extends Service
      */
     public function panelRenderer(&$output, $data, $module)
     {
-        $output .= $this->view('panel/index')->output();
+        //$output .= $this->view('panel/index')->output();
     }
 
     /**
