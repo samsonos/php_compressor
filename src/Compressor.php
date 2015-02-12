@@ -1,9 +1,10 @@
 <?php
-namespace samsonos\compressor;
+namespace samsonphp\compressor;
 
 use samson\core\ExternalModule;
 use samson\core\Core;
 use samson\core\iModule;
+use samsonphp\event\Event;
 
 /**
  * Module for automatic code optimization|compression
@@ -11,11 +12,8 @@ use samson\core\iModule;
  * @package samsonos\compressor
  * @author Vitaly Iegorov <egorov@samsonos.com>
  */
-class Compressor extends ExternalModule
+class Compressor
 {
-    /** Идентификатор модуля */
-    protected $id = 'compressor';
-
     /** Identifier of global namespace */
     const NS_GLOBAL = '';
 
@@ -58,6 +56,27 @@ class Compressor extends ExternalModule
     /** @var string Web-application environment identifier */
     protected $environment = 'prod';
 
+    /** @var bool Debug flag */
+    protected $debug = false;
+
+    /** @var string Supported php version */
+    protected $phpVersion = PHP_VERSION;
+
+    /**
+     * Compress web-application
+     * @param string    $output  	    Path for creating compressed version
+     * @param boolean   $debug 	        Disable errors output
+     * @param string    $environment 	Configuration environment
+     * @param string    $phpVersion 	PHP version to support
+     */
+    public function __construct($output = 'out/', $debug = false, $environment = 'prod', $phpVersion = PHP_VERSION)
+    {
+        $this->output = $output;
+        $this->debug = $debug;
+        $this->environment = $environment;
+        $this->phpVersion = $phpVersion;
+    }
+
     /**
      * Свернуть файл представления
      *
@@ -85,15 +104,14 @@ class Compressor extends ExternalModule
         $view_html = Minify_HTML::minify($view_html);
 
         // Fire event to render view correctly
-        \samsonphp\event\Event::fire('core.render', array(&$view_html, array(), &$module));
+        Event::fire('core.render', array(&$view_html, array(), &$module));
 
         // Template re-rendering
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
-        \samsonphp\event\Event::fire('core.rendered', array(&$view_html, array(), &$this));
+        Event::fire('core.rendered', array(&$view_html, array(), m('compressor')));
 
         // If rendering from array
-        if( $this->view_mode == Core::RENDER_ARRAY )
-        {
+        if ($this->view_mode == Core::RENDER_ARRAY) {
             // Build output view path
             $view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
 
@@ -251,7 +269,7 @@ class Compressor extends ExternalModule
 			if (!(is_a($m, ns_classname( 'iModuleCompressable', 'samson\core')))) {
                 $core->unload( $id );
 			} else { // Reconfigure module
-                \samsonphp\event\Event::fire('core.module.configure', array(&$m, $id));
+                Event::fire('core.module.configure', array(&$m, $id));
                 $this->log(' -- [##] -> Loading config data', $id);
             }
 		}
@@ -333,12 +351,6 @@ class Compressor extends ExternalModule
 		}
 	}
 
-    /** Controller action for compressing debug version of web-application */
-    public function __debug($environment = '')
-    {
-        $this->__HANDLER(true, $environment);
-    }
-
     /** Generic log function for further modification */
     protected function log($message)
     {
@@ -356,7 +368,7 @@ class Compressor extends ExternalModule
      * @param boolean $debug 	Disable errors output
 	 * @param string $php_version 	PHP version to support
      */
-	public function __HANDLER($debug = false, $environment = 'prod', $php_version = PHP_VERSION)
+	public function compress($debug = false, $environment = 'prod', $php_version = PHP_VERSION)
 	{
         // Set compressed project environment
         $this->environment = $environment;
@@ -973,9 +985,6 @@ class Compressor extends ExternalModule
 
         return $main_code;
 	}
-	
-	/** Constructor */
-	public function __construct( $path = null ){ parent::__construct( dirname(__FILE__) ); }
 
     /**
      * Transform class name with namespace to PHP 5.2 format

@@ -1,5 +1,5 @@
 <?php
-namespace samsonos\compressor;
+namespace samsonphp\compressor;
 
 /**
  * Class Minify_HTML

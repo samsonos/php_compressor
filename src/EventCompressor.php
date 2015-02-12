@@ -3,7 +3,7 @@
  * Created by Vitaly Iegorov <egorov@samsonos.com>
  * on 19.09.2014 at 17:26
  */
- namespace samsonos\compressor;
+ namespace samsonphp\compressor;
 
 /**
  * Compressor form SamsonPHP Event system
