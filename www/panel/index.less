@@ -3,16 +3,34 @@
   bottom:0px;
   right:0px;
   z-index: 999999;
-  background: url('www/panel/logo.png') no-repeat;
-  background-position: 100% 50%;
+  padding: 0px 10px;
+
   width:60px;
   height:60px;
-  .opacity(50);
+
+  .__compressor_panel_logo {
+    background: url('www/panel/logo.png') no-repeat;
+    background-position: 100% 50%;
+    width:60px;
+    height:60px;
+    .opacity(50);
+    position:absolute;
+    right:0px;
+    cursor: pointer;
+  }
 
   &:hover {
     left:80%;
-    .opacity(100);
     width:auto;
+    background: black;
+    /*border-bottom-left-radius: 10px;*/
+    border-top-left-radius: 10px;
+
+    .__compressor_panel_logo {
+      -webkit-filter: invert(100%);
+      filter: invert(100%);
+      .opacity(100);
+    }
 
     a { display: inline-block;}
   }
@@ -20,5 +38,8 @@
   a {
     display: none;
     padding:5px;
+    color:white;
+
+    &:hover { .opacity(80);}
   }
 }

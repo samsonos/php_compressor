@@ -12,7 +12,7 @@
         "samsonphp/event":"1.*",
         "samsonos/php_core":"1.*",
         "samsonos/php_resourcer":"*",
-        "samsonos/php_less":"1.*"
+        "samsonos/php_less":"*"
     },
     "license":"Open Software License (OSL) v 3.0",
     "homepage":"http://samsonphp.com/",
