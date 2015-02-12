@@ -1,0 +1,24 @@
+.__compressor_panel {
+  position:absolute;
+  bottom:0px;
+  right:0px;
+  z-index: 999999;
+  background: url('www/panel/logo.png') no-repeat;
+  background-position: 100% 50%;
+  width:60px;
+  height:60px;
+  .opacity(50);
+
+  &:hover {
+    left:80%;
+    .opacity(100);
+    width:auto;
+
+    a { display: inline-block;}
+  }
+
+  a {
+    display: none;
+    padding:5px;
+  }
+}

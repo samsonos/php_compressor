@@ -8,6 +8,7 @@
 namespace samsonphp\compressor;
 
 use samson\core\Service;
+use samsonphp\event\Event;
 
 /**
  * UI module controller
@@ -21,6 +22,23 @@ class Controller extends Service
 
     /** Output path for compressed web application */
     public $output = 'out/';
+
+    /** Module init */
+    public function init(array $params = array())
+    {
+        Event::subscribe('core.rendered', array($this, 'panelRenderer'));
+    }
+
+    /**
+     * Panel render handler
+     * @param string    $output HTML output
+     * @param array     $data   View variables collection
+     * @param \samson\core\Module $module Active module pointer
+     */
+    public function panelRenderer(&$output, $data, $module)
+    {
+        $output .= $this->view('panel/index')->output();
+    }
 
     /**
      * Compress web-application

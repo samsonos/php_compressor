@@ -1,0 +1,4 @@
+<div class="__compressor_panel">
+    <a href="<?php iv('id')?>"><?php t('Compress')?></a>
+    <a href="<?php iv('id')?>/debug"><?php t('Compress with debug')?></a>
+</div>
