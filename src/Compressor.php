@@ -1,7 +1,6 @@
 <?php
 namespace samsonphp\compressor;
 
-use samson\core\ExternalModule;
 use samson\core\Core;
 use samson\core\iModule;
 use samsonphp\event\Event;
@@ -253,51 +252,6 @@ class Compressor
 		return $path;
 		//e('Файл представления ## - Обращение к роутеру ресурсов через переменную ##', E_SAMSON_SNAPSHOT_ERROR, array($view_path, $path));
 	}
-	
-	/** Prepare core serialized string only with necessary and correct data	*/
-	public function compress_core($no_ns = false)
-	{
-        // Get core pointer
-        $core = & s();
-
-        // Switch to production environment
-        $core->environment('prod');
-
-		// Unload all modules from core that does not implement interface iModuleCompressable
-		foreach ($core->module_stack as $id => & $m) {
-            // Unload modules that is not compressable
-			if (!(is_a($m, ns_classname( 'iModuleCompressable', 'samson\core')))) {
-                $core->unload( $id );
-			} else { // Reconfigure module
-                Event::fire('core.module.configure', array(&$m, $id));
-                $this->log(' -- [##] -> Loading config data', $id);
-            }
-		}
-		
-		// Set core rendering model
-        $core->render_mode = $this->view_mode;
-		
-		// Change system path to relative type
-        $core->path('');
-		
-		// Create serialized copy
-		$core_code = serialize($core);
-		
-		// If no namespaces 
-		if ($no_ns) {
-			if (preg_match_all('/O:\d+:\"(?<classname>[^\"]+)\"/i', $core_code, $matches)) {
-				for ($i = 0; $i < sizeof($matches[0]); $i++) {
-					$source = $matches[0][$i];
-					
-					$classname = $matches['classname'][$i];
-					
-					$core_code = $this->transformClassName($source, $classname, $core_code, nsname($classname));
-				}
-			}
-		}
-	
-		return $core_code;
-	}
 
     /**
      * Copy file from source location to destination location with
@@ -352,7 +306,7 @@ class Compressor
 	}
 
     /** Generic log function for further modification */
-    protected function log($message)
+    public function log($message)
     {
         // Get passed vars
         $vars = func_get_args();
@@ -460,9 +414,12 @@ class Compressor
 		
 		// Set errors output
 		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'\samson\core\Error::$OUTPUT = '.(!$debug?'false':'true').';';
+
+        // Create SamsonPHP core compressor
+        $core = new \samsonphp\compressor\Core(s(), $environment, $this);
 	
 		// Add global base64 serialized core string
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.base64_encode($this->compress_core( $this->view_mode == Core::RENDER_ARRAY)).'\';';
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__CORE_SNAPSHOT"] = \''.$core->compress().'\';';
 
 		// Add all specified requires
 		foreach ( $this->require as $require ) $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'require("'.$require.'");';

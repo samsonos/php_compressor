@@ -31,15 +31,25 @@ class Core
      */
     public function __construct($core, $environment = 'prod', $logger = null)
     {
-        $this->core = $core;
+        $this->core = & $core;
         $this->environment = $environment;
-        $this->logger = $logger;
+        $this->logger = & $logger;
     }
 
+    /**
+     * Method prepare core instance removing all unnecessary loaded modules
+     * from it, and configuring it.
+     * @return string Base64 encoded serialized core object instance
+     */
     public function compress()
     {
+        $this->logger->log(' -- Compressing core');
+
         // Switch to production environment
         $this->core->environment($this->environment);
+
+        // Set rendering from string variables mode
+        $this->core->render_mode = \samson\core\Core::RENDER_VARIABLE;
 
         // Unload all modules from core that does not implement interface iModuleCompressable
         foreach ($this->core->module_stack as $id => & $m) {
@@ -57,6 +67,6 @@ class Core
         $this->core->path('');
 
         // Create serialized object copy
-        return serialize($this->core);
+        return base64_encode(serialize($this->core));
     }
 }
