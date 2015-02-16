@@ -3,6 +3,7 @@ namespace samsonphp\compressor;
 
 use samson\core\Core;
 use samson\core\iModule;
+use samsonos\compressor\Module;
 use samsonphp\event\Event;
 
 /**
@@ -366,7 +367,16 @@ class Compressor
         );
 
 		// Define global views collection
-		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';	
+		$this->php[ self::NS_GLOBAL ][ self::VIEWS ] = "\n".'$GLOBALS["__compressor_files"] = array();';
+
+        // Iterate all loaded modules
+        foreach (s()->module_stack as & $module) {
+            // Work only with compressible modules
+            if (is_a($module, 'samson\core\iModuleCompressable')) {
+               // $moduleCompressor = new Module(s(), $module, $this);
+                //$moduleCompressor->compress();
+            }
+        }
 		
 		// Iterate core ns resources collection
 		foreach (s()->load_module_stack as $id => & $data) {
