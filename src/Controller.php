@@ -23,6 +23,22 @@ class Controller extends Service
     /** Output path for compressed web application */
     public $output = 'out/';
 
+	public $configuration = array();
+
+	/**
+	 * @param mixed $entityConfiguration current instance for configuration
+	 * @return boolean False if something went wrong otherwise true
+	 */
+	public function configure($entityConfiguration)
+	{
+		// Convert object to array
+		$this->configuration = (array)$entityConfiguration;
+		// Set fileServiceClassName parameter from config
+		if (!empty($this->configuration['output']{0})) {
+			$this->output = $this->configuration['output'];
+		}
+	}
+
 
 
     /**
@@ -45,6 +61,13 @@ class Controller extends Service
     public function __handler($debug = false, $environment = 'prod', $phpVersion = PHP_VERSION)
     {
         $compressor = new Compressor($this->output, $debug, $environment, $phpVersion);
+	    foreach ($this->configuration as $key=>$value) {
+		    // If object has configured property defined
+		    if (property_exists($compressor, $key)) {
+			    // Set object variable value
+			    $compressor->$key = $value;
+		    }
+	    }
         $compressor->compress($debug, $environment, $phpVersion);
     }
 
