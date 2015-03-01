@@ -168,6 +168,8 @@ class EventCompressor
             $this->findAllStaticSubscriptions($input)
         );
 
+
+
         // Gather events fires
         $this->fires = array_merge_recursive(
             $this->fires,
@@ -188,6 +190,7 @@ class EventCompressor
 
         // Iterate all event fire calls
         foreach ($this->fires as $id => $data) {
+
             // Collection of actual event handler call for replacement
             $code = array();
 
@@ -257,7 +260,7 @@ class EventCompressor
                     $this->log('Removing subscription [##]', $data['source']);
                 }
             }
-
+	        $code = array_unique($code);
             // Replace Event::fire call with actual handlers
             $input = str_replace($data['source'], implode("\n", $code), $input);
             foreach ($code as $replace) {

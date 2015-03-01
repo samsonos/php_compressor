@@ -23,11 +23,7 @@ class Controller extends Service
     /** Output path for compressed web application */
     public $output = 'out/';
 
-    /** Module init */
-    public function init(array $params = array())
-    {
-        //Event::subscribe('core.rendered', array($this, 'panelRenderer'));
-    }
+
 
     /**
      * Panel render handler

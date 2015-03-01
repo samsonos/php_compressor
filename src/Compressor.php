@@ -158,7 +158,7 @@ class Compressor
 			
 		// Call special method enabling module personal resource pre-management on compressing
 		if( $module->beforeCompress( $this, $this->php ) !== false ) {
-            // Copy all module resources
+			// Copy all module resources
 			$this->copy_path_resources($data['resources'], $module_path, $module_output_path );
 		
 			// Internal collection of module php code, not views
@@ -377,18 +377,23 @@ class Compressor
                 //$moduleCompressor->compress();
             }
         }
-		
+
 		// Iterate core ns resources collection
 		foreach (s()->load_module_stack as $id => & $data) {
-			// Get module instance				
+
+			// Get module instance
 			$module = & s()->module_stack[ $id ];
 
 			// Work only with compressable modules
 			if (is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core'))) {
-				$this->compress_module( $module, $data );					
-			}		
+				/*if (in_array($id, array('local'))){
+					//trace($module);
+					//trace($data);
+					$this->compress_module( $module, $data );
+				}*/
+				$this->compress_module( $module, $data );
+			}
 		}
-		
 		// Iterate only local modules
 		foreach ( s()->module_stack as $id => & $module ) {
             if (is_a( $module, \samson\core\AutoLoader::classname('samson\core\CompressableLocalModule'))) {
@@ -476,10 +481,12 @@ class Compressor
         $entryScriptPath = __SAMSON_CWD__.__SAMSON_PUBLIC_PATH.'index.php';
         $entryScript = & $this->php[self::NS_GLOBAL][$entryScriptPath];
 
+
+
         // Collect all event system data
         $eventCompressor = new EventCompressor();
         $eventCompressor->collect($entryScript);
-		
+
 		// Remove standard framework entry point from index.php	- just preserve default controller
 		if( preg_match('/start\(\s*(\'|\")(?<default>[^\'\"]+)/i', $entryScript, $matches )) {
             /*
@@ -501,7 +508,7 @@ class Compressor
 		$global_ns = $this->php[ self::NS_GLOBAL ];
 		unset( $this->php[ self::NS_GLOBAL ] );
 		$this->php[ self::NS_GLOBAL ] = $global_ns;
-		
+
 		// Set view data to the end of global namespace
 		$s = $this->php[ self::NS_GLOBAL ][ self::VIEWS ];
 		unset( $this->php[ self::NS_GLOBAL ][ self::VIEWS ] );
@@ -522,8 +529,8 @@ class Compressor
                 // Fill namespace entities, make OOP entities correct order
                 $files = array_merge($classes[$ns], $files);
             }
-		}		
-		
+		}
+
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );
 
@@ -687,6 +694,7 @@ class Compressor
 		else if( !is_file($path) )				return $this->log('    ! Файл: [##], не существует', $_path );
 		else if(strpos($path, 'vendor/autoload.php') !== false) return $this->log('    Ignoring composer autoloader [##]', $path);
         else if(in_array(basename($path), $this->ignoredFiles)) { return $this->log('    Ignoring file[##] by configuration', $path);}
+
 
         $this->log('   -- Compressing file [##]', $path);
 
