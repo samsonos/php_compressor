@@ -60,14 +60,7 @@ class Controller extends Service
      */
     public function __handler($debug = false, $environment = 'prod', $phpVersion = PHP_VERSION)
     {
-        $compressor = new Compressor($this->output, $debug, $environment, $phpVersion);
-	    foreach ($this->configuration as $key=>$value) {
-		    // If object has configured property defined
-		    if (property_exists($compressor, $key)) {
-			    // Set object variable value
-			    $compressor->$key = $value;
-		    }
-	    }
+        $compressor = new Compressor($this->output, $debug, $environment, $phpVersion, $this->configuration);
         $compressor->compress($debug, $environment, $phpVersion);
     }
 

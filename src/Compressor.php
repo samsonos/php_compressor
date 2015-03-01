@@ -68,13 +68,21 @@ class Compressor
      * @param boolean   $debug 	        Disable errors output
      * @param string    $environment 	Configuration environment
      * @param string    $phpVersion 	PHP version to support
+     * @param array    $configuration	Configuration
      */
-    public function __construct($output = 'out/', $debug = false, $environment = 'prod', $phpVersion = PHP_VERSION)
+    public function __construct($output = 'out/', $debug = false, $environment = 'prod', $phpVersion = PHP_VERSION, $configuration = array())
     {
         $this->output = $output;
         $this->debug = $debug;
         $this->environment = $environment;
         $this->phpVersion = $phpVersion;
+	    foreach ($configuration as $key=>$value) {
+		    // If object has configured property defined
+		    if (property_exists($this, $key)) {
+			    // Set object variable value
+			    $this->$key = $value;
+		    }
+	    }
     }
 
     /**
