@@ -209,7 +209,11 @@ class EventCompressor
                                 $call = '';
 
                                 // Get pointer to object
-                                $object = & $handler[0][0];
+                                if (is_scalar($handler[0][0])) {
+                                    $object = $handler[0][0];
+                                } else {
+                                    $object = & $handler[0][0];
+                                }
 
                                 // TODO: Not existing dynamic handlers what was excluded from compressed code
 
