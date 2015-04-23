@@ -535,7 +535,11 @@ class Compressor
 		}
 
         // Add generic composer auto loader require
-        array_unshift($this->php['samson\core'], "\n".'if(file_exists("vendor/autoload.php")) require "vendor/autoload.php";');
+        $this->php['samson\core']['__before_all'] = array_reverse($this->php['samson\core'], true);
+        $this->php['samson\core']['__before_all'] = "\n".'if(file_exists("vendor/autoload.php")) require "vendor/autoload.php";';
+        $this->php['samson\core'] = array_reverse($this->php['samson\core'], true);
+
+        trace($this->php['samson\core'], true);
 
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );
