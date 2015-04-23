@@ -97,6 +97,8 @@ class EventCompressor
         // Matching pattern
         $pattern = '/(\\\\samsonphp\\\\event\\\\|samson_core_|\\\samson\\\core\\\)?Event::(fire|signal)\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*(,\s*(?<params>[^;]+)|\s*\))?/ui';
 
+        // TODO: Move to token_get_all();
+
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
             // Iterate all matches based on event identifiers
@@ -108,8 +110,10 @@ class EventCompressor
                 $match = array();
                 if (preg_match('/\),\s*true\s*\)/', $params, $match)) {
                     $params = str_replace($match[0], '', $params);
-
                 }
+
+                // Remove spaces and new lines
+                $params = preg_replace('/[ \t\n\r]+/', '', $params);
 
                 // Parse all fire parameters
                 $args = array();
@@ -232,7 +236,6 @@ class EventCompressor
                                 }
 
                                 // TODO: Define what to do with other classes, only functions supported
-
                                 // If we have found correct object
                                 if (isset($call{0})) {
                                     // Event fire passes parameters
@@ -241,10 +244,11 @@ class EventCompressor
                                     }
 
                                     // Gather object calls
-                                    $code[] = $call . ');';
+                                    $code[] = $call .');';
                                 } else {
                                     $this->log(' - Cannot replace event fire[##] with [##] - [##]', $id, $event['object'], $event['method']);
                                 }
+
                             }
                         }
                     } else { // Global function
