@@ -482,14 +482,9 @@ class Compressor
         // Add default system locale to them end of core definition
         $this->php['samson\core'][ self::VIEWS ] = "\n".'define("DEFAULT_LOCALE", "'.DEFAULT_LOCALE.'");';
 
-        // Add generic composer auto loader require
-        $this->php['samson\core'][ self::VIEWS ] .= "\n".'if(file_exists("vendor/autoload.php")) require "vendor/autoload.php";';
-
         // Pointer to entry script code
         $entryScriptPath = __SAMSON_CWD__.__SAMSON_PUBLIC_PATH.'index.php';
         $entryScript = & $this->php[self::NS_GLOBAL][$entryScriptPath];
-
-
 
         // Collect all event system data
         $eventCompressor = new EventCompressor();
@@ -538,6 +533,9 @@ class Compressor
                 $files = array_merge($classes[$ns], $files);
             }
 		}
+
+        // Add generic composer auto loader require
+        array_unshift($this->php['samson\core'], "\n".'if(file_exists("vendor/autoload.php")) require "vendor/autoload.php";');
 
 		// Соберем весь PHP код в один файл
 		$index_php = $this->code_array_to_str( $this->php, ($this->view_mode == Core::RENDER_ARRAY) );
