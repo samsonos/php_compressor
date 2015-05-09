@@ -1092,7 +1092,7 @@ class Compressor
 			// Replace class static call	
 			$code = preg_replace( '/([^\\\a-z])'.$class_name.'::/i', '$1'.$full_class.'::', $code );
 			
-			// Replace class implements calls			
+			// Replace class implements calls
 			$code = preg_replace( '/implements\s+(.*)'.$class_name.'/i', 'implements $1'.$full_class.' ', $code );
 			
 			// Replace class extends calls
@@ -1103,7 +1103,10 @@ class Compressor
 
 			// Replace class creation call
 			$code = preg_replace( '/new\s+'.$class_name.'\s*\(/i', 'new '.$full_class.'(', $code );
-		}
+
+            // Replace annotations
+            $code = preg_replace( '/([, (])'.$class_name.'\s\$/i', '$1 $2'.$full_class.' $', $code );
+        }
 		
 		return $code;
 	}
