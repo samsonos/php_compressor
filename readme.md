@@ -6,7 +6,7 @@
 [![Code Climate](https://codeclimate.com/github/samsonos/php_compressor/badges/gpa.svg)](https://codeclimate.com/github/samsonos/php_compressor) 
 [![Total Downloads](https://poser.pugx.org/samsonos/php_compressor/downloads.svg)](https://packagist.org/packages/samsonos/php_compressor)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/samsonos/php_compressor/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/samsonos/php_compressor/?branch=master)
-[![Stories in Ready](https://badge.waffle.io/samsonos/php_compressor.png?label=ready&title=Ready)](https://waffle.io/samsonos/php_compressor)
+[![Stories in Ready](https://badge.waffle.io/samsonos/php_compressor.png?label=*&title=Ready)](https://waffle.io/samsonos/php_compressor)
 
 Exclusive module which differs this PHP framework among all others,
 
