@@ -435,7 +435,17 @@ class Compressor
         // Copy main project composer.json
         $composerPath = __SAMSON_CWD__.'composer.json';
         if (file_exists($composerPath)) {
-            $this->copy_resource($composerPath, $this->output.'composer.json');
+            // Read json file
+            $composerJSON = (array)json_decode(file_get_contents($composerPath));
+            // Remove development dependencies
+            unset($composerJSON['require-dev']);
+            // Remove autoload section
+            unset($composerJSON['autoload']);
+            // Remove install/update scripts
+            unset($composerJSON['scripts']);
+
+            // Write modified composer.json
+            file_put_contents($this->output.'composer.json', json_encode($composerJSON));
         }
 		
 		// Set errors output
