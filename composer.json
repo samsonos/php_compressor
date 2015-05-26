@@ -1,25 +1,28 @@
 {
-    "name":"samsonos/php_compressor",
-    "description":"SamsonPHP automatic code compressor|generator|optimizer",
-    "authors":[
-        {
-            "name":"Vitaly Iegorov",
-            "email":"egorov@samsonos.com"
-        }
-    ],
-    "minimum-stability" :"dev",
-    "require":{
-        "samsonphp/event":"1.*",
-        "samsonos/php_core":"1.*",
-        "samsonos/php_resourcer":"*",
-        "samsonos/php_less":"*"
-    },
-    "license":"Open Software License (OSL) v 3.0",
-    "homepage":"http://samsonphp.com/",
-    "autoload" : {
-        "classmap": ["src/"],
-        "psr-0": {
-            "samsonphp\\compressor\\": "src/"
-        }
+  "name": "samsonos/php_compressor",
+  "description": "SamsonPHP automatic code compressor|generator|optimizer",
+  "authors": [
+    {
+      "name": "Vitaly Iegorov",
+      "email": "egorov@samsonos.com"
     }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "samsonphp/event": "1.*",
+    "samsonos/php_core": "1.*",
+    "samsonos/php_resourcer": "*",
+    "samsonos/php_less": "*"
+  },
+  "license": "Open Software License (OSL) v 3.0",
+  "homepage": "http://samsonphp.com/",
+  "autoload": {
+    "classmap": ["src/"],
+    "psr-4": {
+      "samsonphp\\compressor\\": "src/"
+    }
+  },
+  "config": {
+    "github-protocols": ["https"]
+  }
 }
