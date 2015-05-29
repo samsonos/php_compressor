@@ -105,8 +105,14 @@ class Compressor
 
         if( ! isset($view_file{0}) ) return e('View: ##(##) is empty', E_SAMSON_SNAPSHOT_ERROR, array($view_file, $rel_path) );
 
+        // TODO: should be done via events in resourcer module
         // Найдем обращения к роутеру ресурсов
-        $view_html = preg_replace_callback( '/(<\?php)*\s*src\s*\(\s*(\'|\")*(?<path>[^\'\"\)]+)(\s*,\s*(\'|\")(?<module>[^\'\"\)]+))*(\'|\")*\s*\)\s*;*\s*(\?>)*/uis', array( $this, 'src_replace_callback'), $view_html );
+        $view_html = preg_replace_callback(
+            '/(<\?php)*\s*src\s*\(\s*(\'|\")(?<path>[^\'\"\)]+)(\'|\")(\s*,\s*(\'|\")(?<module>[^\'\"\)]+)(\'|\"))?\s*\)(\s*\?>)?/uis',
+            array( $this, 'src_replace_callback'),
+            $view_html
+        );
+
 
         // Сожмем HTML
         $view_html = Minify_HTML::minify($view_html);
@@ -248,8 +254,8 @@ class Compressor
 	public function src_replace_callback( $matches )
 	{
 		// Получим относительный путь к ресурсу
-		$path = $matches['path'];
-	
+		$path = trim($matches['path']);
+
 		// Путь к модуля после сжимания
 		$module_path = $this->current->id().'/';
 	
