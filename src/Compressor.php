@@ -954,7 +954,7 @@ class Compressor
 								$this->compress_php( $file_path, $module, $code, $namespace );
 
 								// Измением позицию маркера чтения файла
-								$i = $j;
+								$i = $j + 1;
 							}
 						} else {
                             $main_code .= $text;
