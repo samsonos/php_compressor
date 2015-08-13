@@ -172,8 +172,6 @@ class EventCompressor
             $this->findAllStaticSubscriptions($input)
         );
 
-
-
         // Gather events fires
         $this->fires = array_merge_recursive(
             $this->fires,
@@ -267,12 +265,23 @@ class EventCompressor
                     $input = str_replace($subscription['source'], '', $input);
                     $this->log('Removing subscription [##]', $data['source']);
                 }
-            }
-	        $code = array_unique($code);
-            // Replace Event::fire call with actual handlers
-            $input = str_replace($data['source'], implode("\n", $code), $input);
-            foreach ($code as $replace) {
-                $this->log('Replacing [##] with [##]', $data['source'], $replace);
+
+                // Remove duplicates
+                $code = array_unique($code);
+
+                // Replace Event::fire call with actual handlers
+                $input = str_replace($data['source'], implode("\n", $code), $input);
+
+                // Logging changes in code
+                foreach ($code as $replace) {
+                    $this->log('Replacing [##] with [##]', $data['source'], $replace);
+                }
+
+            } else { // There is no subscriptions to this event fire
+                // Remove Event::fire call without subscriptions
+                $input = str_replace($data['source'], '', $input);
+
+                $this->log('Removing event firing [##] as it has no subscriptions', $data['source']);
             }
         }
 
