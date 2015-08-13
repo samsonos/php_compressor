@@ -4,6 +4,7 @@ namespace samsonphp\compressor;
 use samson\core\Core;
 use samson\core\iModule;
 use samsonos\compressor\Module;
+use samsonphp\compressor\resource\JavaScript;
 use samsonphp\event\Event;
 
 /**
@@ -128,25 +129,7 @@ class Compressor
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
         Event::fire('core.rendered', array(&$view_html, array(), m('compressor')));
 
-        // If rendering from array
-        if ($this->view_mode == Core::RENDER_ARRAY) {
-            // Build output view path
-            $view_php  = str_replace( __SAMSON_VIEW_PATH, '', $module->id().'/'.str_replace( $module->path(), '', $view_file));
-
-            // Full path to output file
-            $dst = $this->output.$view_php;
-
-            // Copy view file
-            $this->copy_resource( $view_file, $dst, function() use ( $dst, $view_html, $view_file) {
-                // Write new view content
-                file_put_contents( $dst, $view_html );
-            });
-
-            // Prepare view array value
-            $view_php = '\''.$view_php.'\';';
-        }
-        // If rendering from variables is selected
-        else if( $this->view_mode == Core::RENDER_VARIABLE ) $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;";
+        $view_php = "<<<'EOT'"."\n".$view_html."\n"."EOT;";
 
         // Add view code to final global namespace
         $this->php[ self::NS_GLOBAL ][ self::VIEWS ] .= "\n".'$GLOBALS["__compressor_files"]["'.$rel_path.'"] = '.$view_php;
@@ -205,52 +188,6 @@ class Compressor
 	}
 	
 	/**
-	 * Copy resource handler for CSS rseources with rewriting url's
-	 * @param string $src	Path to source CSS file
-	 * @param string $dst	Path to destination CSS file
-	 * @param string $action Action to perform 
-	 */
-	public function copy_css( $src, $dst, $action )
-	{
-		// Read source file
-		$text = file_get_contents( $src );
-		
-		// Найдем ссылки в ресурса
-		if( preg_match_all( '/url\s*\(\s*(\'|\")*(?<url>[^\'\"\)]+)\s*(\'|\")*\)/i', $text, $matches ) )
-		{			
-			// Если мы нашли шаблон - переберем все найденные патерны
-			if( isset( $matches['url']) ) for ($i = 0; $i < sizeof($matches['url']); $i++)
-			{
-				// Получим путь к ресурсу используя маршрутизацию
-				if( m('resourcer')->parseURL( $matches['url'][$i], $module, $path ))
-				{
-					//trace($matches['url'][$i].'-'.url()->base().$module.'/'.$path);
-					// Заменим путь в исходном файле
-					$text = str_replace( $matches['url'][$i], url()->base().($module == 'local'?'':$module.'/').$path, $text );
-				}	
-			}
-		}
-	
-		// Write destination file
-		file_put_contents( $dst, $text );	
-	}
-	
-	/**
-	 * Copy resource handler for JS resources with rewriting url's
-	 * @param string $src	Path to source CSS file
-	 * @param string $dst	Path to destination CSS file
-	 * @param string $action Action to perform
-	 */
-	public function copy_js( $src, $dst, $action )
-	{
-		// Read source file
-		$text = file_get_contents( $src );		
-	
-		// Write destination file
-		file_put_contents( $dst, $text );
-	}
-	
-	/**
 	 * Обработчик замены роутера ресурсов
 	 * @param array $matches Найденые совпадения по шаблону
 	 * @return string Обработанный вариант пути к ресурсу
@@ -270,58 +207,6 @@ class Compressor
 	
 		return $path;
 		//e('Файл представления ## - Обращение к роутеру ресурсов через переменную ##', E_SAMSON_SNAPSHOT_ERROR, array($view_path, $path));
-	}
-
-    /**
-     * Copy file from source location to destination location with
-     * analyzing last file modification time, and copying only changed files
-     *
-     * @param string $src source file
-     * @param string $dst destination file
-     * @param null   $handler
-     *
-     * @return bool
-     */
-	public function copy_resource( $src, $dst, $handler = null )
-	{
-		if (!file_exists($src)) {
-            $this->log('Source file [##] not found', $src);
-        }
-		
-		// Action to do
-		$action = null;
-		
-		// If destination file does not exists
-		if( !file_exists( $dst ) ) $action = 'Creating';
-		// If source file has been changed
-		else if( filemtime( $src ) <> filemtime( $dst ) ) $action = 'Updating';		
-
-		// If we know what to do
-		if( isset( $action )) {
-
-			// Create folder structure if necessary
-			$dir_path = dirname($dst);
-			if (!file_exists($dir_path)) {
-                $this->log('   -- Creating folder structure from [##] to [##]', dirname($src), $dir_path);
-				\samson\core\File::mkdir($dir_path);
-			}
-			
-			// If file handler specified 
-			if( is_callable($handler) ) {
-                call_user_func( $handler, $src, $dst, $action );
-            } else { // Copy file
-                $this->log('   -- '.$action.' file from [##] to [##]', $src, $dst);
-                copy($src, $dst);
-            }
-			
-			// Sync source file with copied file
-			if(is_writable($dst)) {
-                // Change file permission
-                chmod($dst, 0775);
-                // Modify source file anyway
-                touch($dst, filemtime($src));
-            }
-		}
 	}
 
     /** Generic log function for further modification */
@@ -433,13 +318,17 @@ class Compressor
             foreach($this->ignoredFolders as $folder) {
                 $ignoreFolders[] = $this->output.$folder;
             }
+
+            // Remove all old javascript and css
             \samson\core\File::clear($this->output, array('js', 'css'), $ignoreFolders);
-						
-			// Copy cached js resource
-			$this->copy_resource( __SAMSON_CWD__.$rr->cached['js'], $this->output.basename($rr->cached['js']), array( $this, 'copy_js'));		
-			
-			// Copy cached css resource
-			$this->copy_resource( __SAMSON_CWD__.$rr->cached['css'], $this->output.basename($rr->cached['css']), array( $this, 'copy_css') );			
+
+            // Manage javascript resource
+            $javascriptManager = new resource\JavaScript($this);
+            $javascriptManager->compress(__SAMSON_CWD__.$rr->cached['js'], $this->output.basename($rr->cached['js']));
+
+            // Manage CSS resource
+            $cssManager = new resource\CSS($this, $rr);
+            $cssManager->compress(__SAMSON_CWD__.$rr->cached['css'], $this->output.basename($rr->cached['css']));
 		}
 
         // Copy main project composer.json

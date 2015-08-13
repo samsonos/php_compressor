@@ -74,6 +74,16 @@ class Generic
     }
 
     /**
+     * Update file resource
+     * @param string $fromFilePath Source file path
+     * @param string $toFilePath Destination file path
+     */
+    protected function update($fromFilePath, $toFilePath)
+    {
+        copy($fromFilePath, $toFilePath);
+    }
+
+    /**
      * Compress file resource
      * @param string $fromFilePath Source file path
      * @param string $toFilePath Destination file path
@@ -93,7 +103,7 @@ class Generic
             // If destination file does not exists or source file has been modified
             if (!file_exists($toFilePath) || (filemtime($fromFilePath) <> filemtime($toFilePath))) {
                 $this->parent->log(' +- Updated from file[##] to [##]', $fromFilePath, $toFilePath);
-                copy($fromFilePath, $toFilePath);
+                $this->update($fromFilePath, $toFilePath);
             }
 
             // Sync destination file with source file
