@@ -203,14 +203,8 @@ class EventCompressor
 
     public function transform($input, & $output = '')
     {
-        // Gather everything again
-        //$this->collect($input);
-
         // Get all defined handlers
         $handlers = \samsonphp\event\Event::listeners();
-
-        //trace($handlers['core.routing'], true);
-        //trace($this->subscriptions, true);
 
         // Iterate all event fire calls
         foreach ($this->fires as $id => $data) {
