@@ -8,7 +8,7 @@
 namespace samsonphp\compressor\resource;
 
 /**
- * Module compression resource management
+ * Module compression JavaScript resource management
  * @package samsonphp\compressor
  */
 class JavaScript extends Generic

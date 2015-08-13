@@ -7,13 +7,16 @@
  */
 namespace samsonphp\compressor\resource;
 
+use \samsonphp\compressor\CompressibleInterface;
+use \samsonphp\compressor\Compressor;
+
 /**
  * Module compression resource management
  * @package samsonphp\compressor
  */
-class Generic
+class Generic implements CompressibleInterface
 {
-    /** @var  \samsonphp\compressor\Compressor Parent compressing object */
+    /** @var  Compressor Parent compressing object */
     protected $parent;
 
     /** @var string[] Collection of ignored file extensions */
@@ -29,12 +32,12 @@ class Generic
     protected $moduleFolders = array();
 
     /**
-     * @param \samsonphp\compressor\Compressor $compressor Pointer to parent compressing object
+     * @param Compressor $compressor Pointer to parent compressing object
      * @param string[] $ignoredExtensions Collection of ignored file extensions
      * @param string[] $ignoredFiles Collection of ignored files
      * @param string[] $ignoredFolders Collection of ignored folders
      */
-    public function __construct(\samsonphp\compressor\Compressor & $compressor, $ignoredExtensions = array(), $ignoredFiles = array(), $ignoredFolders = array())
+    public function __construct(Compressor & $compressor, $ignoredExtensions = array(), $ignoredFiles = array(), $ignoredFolders = array())
     {
         $this->parent = & $compressor;
 
@@ -87,6 +90,7 @@ class Generic
      * Compress file resource
      * @param string $fromFilePath Source file path
      * @param string $toFilePath Destination file path
+     * @return mixed Compression result
      */
     public function compress($fromFilePath, $toFilePath)
     {

@@ -10,7 +10,7 @@ use samsonphp\compressor\Compressor;
 use samson\core\Module;
 
 /**
- * Module compression resource management
+ * Module compression CSS resource management
  * @package samsonphp\compressor
  */
 class CSS extends Generic
