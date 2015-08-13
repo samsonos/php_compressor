@@ -574,6 +574,8 @@ class Compressor
             $index_php = str_replace($matches[0], 'define(\'__SAMSON_PHP_OLD\',\''.($this->view_mode == Core::RENDER_ARRAY).'\');', $index_php);
         }
 
+        $index_php = $this->removeBlankLines($index_php);
+
         // Запишем пусковой файл
         file_put_contents($this->output.'index.php', '<?php '.$index_php."\n".'?>');
 
@@ -1032,6 +1034,18 @@ class Compressor
 		
 		return $php;
 	}
+
+    /**
+     * Remove blank lines from code
+     * http://stackoverflow.com/questions/709669/how-do-i-remove-blank-lines-from-text-in-php
+     * @param string $code Code for removing blank lines
+     * @return string Modified code
+     */
+    protected function removeBlankLines($code)
+    {
+        // New line is required to split non-blank lines
+        return preg_replace("/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/", "\n", $code);
+    }
 	
 	/** Change class name to old format without namespace */
 	private function changeClassName($matches, $php, $ns, $uses = array())

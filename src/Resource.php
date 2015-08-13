@@ -38,7 +38,7 @@ class Resource
     {
         $this->parent = & $compressor;
 
-        // TODO: Maybe we need to fully ovveride defaults, or merge?
+        // TODO: Maybe we need to fully override defaults, or merge?
 
         // Merge passed parameters
         $this->ignoredExtensions = array_merge($this->ignoredExtensions, $ignoredExtensions);
