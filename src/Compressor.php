@@ -33,7 +33,7 @@ class Compressor
     public $ignored_resources = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db', 'Thumbs.db');
 
     /** @var array Collection of folders to be ignored by compressor */
-    public $ignoredFolders = array('vendor');
+    public $ignoredFolders = array('vendor', 'var');
 
     /** @var array Collection of file paths to be ignored by compressor */
     public $ignoredFiles = array();
