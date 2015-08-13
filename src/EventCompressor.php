@@ -179,6 +179,28 @@ class EventCompressor
         );
     }
 
+    /**
+     * Remove all event subscription calls
+     * @param array $subscriptions collection of subscription groups
+     * @param string $code Code for removing subscriptions
+     * @return string Modified code with removed subscriptions(if were present)
+     */
+    public function removeSubscriptionCalls($subscriptions, $code)
+    {
+        // Iterate all subscription groups
+        foreach ($subscriptions as $eventID => $subscriptionGroup) {
+            // Iterate all subscriptions in group
+            foreach ($subscriptionGroup as $subscription) {
+                // Remove all event subscription in code
+                $code = str_replace($subscription['source'], '', $code);
+
+                $this->log('Removing event [##] subscription [##]', $eventID, $subscription['source']);
+            }
+        }
+
+        return $code;
+    }
+
     public function transform($input, & $output = '')
     {
         // Gather everything again
@@ -197,10 +219,9 @@ class EventCompressor
             $code = array();
 
             // Set pointer to event subscriptions collection
-            $subscriptions = & $this->subscriptions[$id];
-            if (isset($subscriptions)) {
+            if (isset($this->subscriptions[$id])) {
                 // Iterate event subscriptions
-                foreach ($subscriptions as &$event) {
+                foreach ($this->subscriptions[$id] as &$event) {
                     $this->log('Analyzing event subscription[##]', $id);
                     // If subscriber callback is object method
                     if (isset($event['object'])) {
@@ -260,12 +281,6 @@ class EventCompressor
                     }
                 }
 
-                // Remove all event subscriptions
-                foreach ($subscriptions as $subscription) {
-                    $input = str_replace($subscription['source'], '', $input);
-                    $this->log('Removing subscription [##]', $data['source']);
-                }
-
                 // Remove duplicates
                 $code = array_unique($code);
 
@@ -285,10 +300,8 @@ class EventCompressor
             }
         }
 
-        // Iterate all subscriptions
-        foreach ($this->subscriptions as $subscription) {
-            trace($subscription, true);
-        }
+        // Remove all subscriptions from code
+        $input = $this->removeSubscriptionCalls($this->subscriptions, $input);
 
         // Copy output
         $output = $input;
