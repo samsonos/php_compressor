@@ -148,7 +148,7 @@ class EventCompressor
         $matches = array();
 
         // Matching pattern
-        $pattern = '/\s*>\s*subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
+        $pattern = '/\s*->\s*subscribe\s*\(\s*(\'|\")(?<id>[^\'\"]+)(\'|\")\s*,\s*(?<handler>[^;-]+)/ui';
 
         // Perform text search
         if (preg_match_all($pattern, $code, $matches)) {
@@ -283,6 +283,11 @@ class EventCompressor
 
                 $this->log('Removing event firing [##] as it has no subscriptions', $data['source']);
             }
+        }
+
+        // Iterate all subscriptions
+        foreach ($this->subscriptions as $subscription) {
+            trace($subscription, true);
         }
 
         // Copy output
