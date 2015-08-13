@@ -19,6 +19,8 @@ class Code
 
     /** Use statement pattern */
     const PAT_USE = '/\s*use\s+(?<class>[^ ]+)(\s+as\s+(<alias>[^;]+))*;/iu';
+    /** Blank lines pattern */
+    const PAT_BLANK_LINES = '/(^[\r\n]*|[\r\n]+)[\s\t]*[\r\n]+/';
 
     /** @var array Collection of files that has been compressed */
     protected $files = array();
@@ -30,6 +32,18 @@ class Code
     protected $logger;
 
     /**
+     * Remove blank lines from code
+     * http://stackoverflow.com/questions/709669/how-do-i-remove-blank-lines-from-text-in-php
+     * @param string $code Code for removing blank lines
+     * @return string Modified code
+     */
+    protected function removeBlankLines($code)
+    {
+        // New line is required to split non-blank lines
+        return preg_replace(self::PAT_BLANK_LINES, "\n", $code);
+    }
+
+    /**
      * @param \samson\core\Module $module Module which code is being gathered
      */
     public function __construct(array $files, $logger = null)
@@ -39,7 +53,7 @@ class Code
         // Gather all module code resource files
         foreach ($files as $file) {
             // Compress this files into code array
-            $this->collect($file);
+            $this->compress($file);
         }
     }
 
@@ -55,15 +69,14 @@ class Code
             for ($i = 0,$size = sizeof($matches[1]); $i < $size; $i++) {
                 // Get full class name
                 $fullClassName = $matches['class'][$i];
+
                 // Get class name without namespace
                 $className = substr(strrchr($fullClassName, '\\'), 1);
 
                 // Prepend global namespace sign
-                if ($fullClassName{0} !== '\\') {
-                    $fullClassName = '\\'.$fullClassName;
-                }
+                $fullClassName = $fullClassName{0} !== '\\' ? '\\'.$fullClassName : $fullClassName;
 
-                // Determine marker in code for thi use, alias or just class name
+                // Determine marker in code for this use, alias or just class name
                 $replace = isset($matches['alias'][$i]{0}) ?
                     $matches['alias'][$i] : // Use alias name
                     $className; // Use class name without namespace
@@ -134,7 +147,7 @@ class Code
         return preg_replace('/'.self::EXCLUDE_ST.'.*?'.self::EXCLUDE_EN.'/uis', '', $code);
     }
 
-    public function collect($file)
+    public function compress($file)
     {
         if (file_exists($file)) {
             // Make full real path to file
@@ -145,8 +158,14 @@ class Code
 
                 $this->logger->log('Compressing PHP code file[##]', $file);
 
-                // Read file contents
-                $code = $this->removeUSE($this->removeExcluded(file_get_contents($file)));
+                // Read and compress file contents
+                $this->data[$file] = $this->removeUSE(
+                    $this->removeExcluded(
+                        $this->removeBlankLines(
+                            file_get_contents($file)
+                        )
+                    )
+                );
 
             } else {
                 $this->logger->log('PHP code file[##] already compressed', $file);

@@ -97,7 +97,7 @@ class Generic
             }
 
             // Sync destination file with source file
-            if(is_writable($toFilePath)) {
+            if (is_writable($toFilePath)) {
                 // Change destination file permission
                 chmod($toFilePath, 0775);
                 // Modify destination modification to match source
@@ -123,21 +123,18 @@ class Generic
                 // Check if this file is not ignored
                 $fileName = pathinfo($filePath, PATHINFO_FILENAME);
                 if (!in_array($fileName, $this->ignoredFiles)) {
-
                     $this->parent->log(' +- File[##] is valid', $filePath);
                     // File is valid
                     return true;
+                } else {
+                    $this->parent->log(' +- File[##] is ignored', $filePath);
                 }
-
-                $this->parent->log(' +- File[##] is ignored', $filePath);
-                return false;
+            } else {
+                $this->parent->log(' +- File[##] extension[##] is ignored', $filePath, $extension);
             }
-
-            $this->parent->log(' +- File[##] extension[##] is ignored', $filePath, $extension);
-            return false;
+        } else {
+            $this->parent->log(' +- File[##] does not exists', $filePath);
         }
-
-        $this->parent->log(' +- File[##] does not exists', $filePath);
 
         // Not valid
         return false;
