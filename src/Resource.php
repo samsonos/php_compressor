@@ -13,14 +13,38 @@ namespace samsonphp\compressor;
  */
 class Resource
 {
+    /** @var  samsonphp\compressor\Compressor Parent compressing object */
+    protected $parent;
+
     /** @var string[] Collection of ignored file extensions */
-    public $ignoredExtensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
+    protected $ignoredExtensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
 
     /** @var string[] Collection of ignored files */
-    public $ignoredFiles = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db');
+    protected $ignoredFiles = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db');
 
     /** @var string[] Collection of ignored folders */
-    public $ignoredFolders = array('vendor', 'var', 'docs');
+    protected $ignoredFolders = array('vendor', 'var', 'docs');
+
+    /** @var string[] Collection of module paths for creating beautiful structure */
+    protected $moduleFolders = array();
+
+    /**
+     * @param Compressor $compressor Pointer to parent compressing object
+     * @param array $ignoredExtensions Collection of ignored file extensions
+     * @param array $ignoredFiles Collection of ignored files
+     * @param array $ignoredFolders Collection of ignored folders
+     */
+    public function __construct(Compressor & $compressor, $ignoredExtensions = array(), $ignoredFiles = array(), $ignoredFolders = array())
+    {
+        $this->parent = & $compressor;
+
+        // TODO: Maybe we need to fully ovveride defaults, or merge?
+
+        // Merge passed parameters
+        $this->ignoredExtensions = array_merge($this->ignoredExtensions, $ignoredExtensions);
+        $this->ignoredFiles = array_merge($this->ignoredFiles, $ignoredFiles);
+        $this->ignoredFolders = array_merge($this->ignoredFolders, $ignoredFolders);
+    }
 
     /**
      * Define is this file is a valid resource
