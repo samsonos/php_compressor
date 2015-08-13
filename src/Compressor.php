@@ -62,6 +62,8 @@ class Compressor
     /** @var string Supported php version */
     protected $phpVersion = PHP_VERSION;
 
+    protected $resourceManager;
+
     /**
      * Compress web-application
      * @param string    $output  	    Path for creating compressed version
@@ -72,6 +74,8 @@ class Compressor
      */
     public function __construct($output = 'out/', $debug = false, $environment = 'prod', $phpVersion = PHP_VERSION, $configuration = array())
     {
+        $this->resourceManager = new resource\Generic($this);
+
         $this->output = $output;
         $this->debug = $debug;
         $this->environment = $environment;
@@ -1076,27 +1080,14 @@ class Compressor
 	private function copy_path_resources( $path_resources, $module_path, $module_output_path )
 	{
 		$this->log(' -> Copying resources from [##] to [##]', $module_path, $module_output_path);
-		
+
 		// Iterate module resources
 		foreach ( $path_resources as $extension => $resources )	{
-			// Iterate only allowed resource types
-			if (!in_array( $extension , $this->ignored_extensions)) {
-                foreach ( $resources as $resource ) {
-                    // Get only filename
-                    $filename = basename( $resource );
+            foreach ( $resources as $resource ) {
+                // Build relative module resource path
+                $relative_path = str_replace($module_path, '', $resource);
 
-                    // Copy only allowed resources
-                    if (!in_array( $filename, $this->ignored_resources)) {
-                        // Build relative module resource path
-                        $relative_path = str_replace($module_path, '', $resource);
-
-                        // Build correct destination folder
-                        $dst = $this->output.$module_output_path.$relative_path;
-
-                        // Copy/update file if necessary
-                        $this->copy_resource( $resource, $dst );
-                    }
-                }
+                $this->resourceManager->compress($resource, $this->output . $module_output_path . $relative_path);
             }
 		}
 	}

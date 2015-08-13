@@ -23,6 +23,7 @@ class Controller extends Service
     /** Output path for compressed web application */
     public $output = 'out/';
 
+    /** @var array Configuration parameters key => value collection */
 	public $configuration = array();
 
 	/**
