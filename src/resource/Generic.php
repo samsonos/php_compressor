@@ -20,7 +20,7 @@ class Generic implements CompressibleInterface
     protected $parent;
 
     /** @var string[] Collection of ignored file extensions */
-    protected $ignoredExtensions = array('php', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
+    protected $ignoredExtensions = array('php', 'txt', 'js', 'css', 'md', 'map', 'dbs', 'vphp', 'less' , 'gz', 'lock', 'json', 'sql', 'xml', 'yml');
 
     /** @var string[] Collection of ignored files */
     protected $ignoredFiles = array('.project', '.buildpath', '.gitignore', '.travis.yml', 'phpunit.xml', 'thumbs.db');
