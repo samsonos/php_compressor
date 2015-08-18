@@ -118,6 +118,8 @@ class Compressor
             $view_html
         );
 
+        // Replace old inline php tags
+        $view_html = str_ireplace('<? ', '<?php ', $view_html);
 
         // Сожмем HTML
         $view_html = Minify_HTML::minify($view_html);
