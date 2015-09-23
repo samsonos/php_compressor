@@ -1003,10 +1003,13 @@ class Compressor
 			
 			// Replace class static call	
 			$code = preg_replace( '/([^\\\a-z])'.$class_name.'::/i', '$1'.$full_class.'::', $code );
-			
+						
 			// Replace class implements calls
-			$code = preg_replace( '/implements(.*\W)'.$class_name.'/i', 'implements $1'.$full_class.' ', $code );
-			
+			$code = preg_replace( '/\s+implements(.*\W)'.$class_name.'/i', ' implements $1'.$full_class.' ', $code );
+
+			// Handle instanceof operator
+            		$code = preg_replace( '/instanceof\s+'.$class_name.'/i', 'instanceof '.$full_class.'', $code );
+
 			// Replace class extends calls
 			$code = preg_replace( '/extends\s+'.$class_name.'/i', 'extends '.$full_class.'', $code );
 			
