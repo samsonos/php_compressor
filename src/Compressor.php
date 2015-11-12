@@ -113,7 +113,7 @@ class Compressor
         // TODO: should be done via events in resourcer module
         // Найдем обращения к роутеру ресурсов
         $view_html = preg_replace_callback(
-            '/(<\?php)*\s*src\s*\(\s*(\'|\")(?<path>[^\'\"\?\;]+)(\'|\")(\s*,\s*(\'|\")(?<module>[^\'\"\)]+)(\'|\"))?\s*\)\;?(\s*\?>)?/uis',
+            '/(<\?php)*\s*src\s*\(\s*(\'|\")?(?<path>[^\'\"\?\;\)]+)(\'|\")?(\s*,\s*(\'|\")(?<module>[^\'\"\)]+)(\'|\"))?\s*\)\;?(\s*\?>)?/uis',
             array( $this, 'src_replace_callback'),
             $view_html
         );
