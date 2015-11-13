@@ -181,13 +181,22 @@ class Compressor
 			
 		// Call special method enabling module personal resource post-management on compressing
 		$module->afterCompress( $this, $this->php );
-		
+
+
+
 		// Gather all code in to global code collection with namespaces
 		$this->code_array_combine($module_php, $this->php);
 		
 		// Change module path
 		$module->path( $id.'/' );
 	}
+
+    public function rewriteResourceRouter(array $matches)
+    {
+        //trace($matches,1);
+        //die;
+        return '"'.$this->current->id().'/'.$matches['path'].'";';
+    }
 	
 	/**
 	 * Обработчик замены роутера ресурсов
@@ -659,7 +668,10 @@ class Compressor
 		$rmarker_en = '\/\/\[PHPCOMPRESSOR\(remove\,end\)\]';
 	
 		// Найдем все "ненужные" блоки кода и уберем их
-		$fileStr = preg_replace('/'.$rmarker_st.'.*?'.$rmarker_en.'/uis', '', $fileStr );		
+		$fileStr = preg_replace('/'.$rmarker_st.'.*?'.$rmarker_en.'/uis', '', $fileStr );
+
+        //TODO: Fix to normal external dependency with ResourceRouter
+        $fileStr = preg_replace_callback('/(\\\\samson\\\\resourcer\\\\)?ResourceRouter::url\((\'|\")(?<path>[^,)]+)(\'|\")(,(?<module>[^)]+))?\);/i', array($this, 'rewriteResourceRouter'), $fileStr);
 		
 		// Разберем код программы
 		$tokens = token_get_all($fileStr);
