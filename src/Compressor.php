@@ -209,7 +209,7 @@ class Compressor
 		$path = trim($matches['path']);
 
 		// Путь к модуля после сжимания
-		$module_path = $this->current->id().'/';
+		$module_path = (isset($matches['module']) && strlen($matches['module']) > 0) ? $matches['module'] . '/' : $this->current->id().'/';
 	
 		// Если передана переменная мы не можем гарантировать её значение
 		if( strpos( $path, '$' ) !== false ) $path = '<?php echo \''.$module_path.'\'.'.$path.'; ?>';
