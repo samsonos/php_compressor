@@ -950,18 +950,45 @@ class Compressor
 			$temp = '';
 		}
 
-		if (preg_match_all('/[^a-zA-Z_]((?<class>self|\\\\?'.$className.')\:\:(?<name>\w+))[^a-zA-Z_]/i', $main_code, $matches)) {
-			for ( $i = 0; $i < sizeof( $matches['name'] ); $i ++ ) {
-				$constantName = ( ( $matches['class'][ $i ]{0} == '\\' ) ? $className : $namespace . '\\' . $className ) . '::' . $matches['name'][ $i ];
+		if (preg_match_all('/(?<class>[\\\\a-z_]+)::(?<name>[a-z_]+)[;=+-\/*%., ]/i', $main_code, $matches)) {
+			for ($i = 0; $i < sizeof($matches['name']); $i++) {
+				// If this is self - use current file class
+				if ($matches['class'][$i] === 'self') {
+					$constantName = $namespace . '\\' . $className;
+				} elseif ($matches['class'][$i] == $className) {
+					// If this is current class add namespace
+					$constantName = $namespace . '\\' . $className;
+				} elseif ($matches['class'][$i] === 'parent') {
+                    continue;
+                } elseif ($matches['class'][$i] === 'static') {
+                    continue;
+                } else {
+					$constantName = $matches['class'][$i];
+				}
 
-				if ( defined( $constantName ) ) {
-					$value     = constant( $constantName );
-					$value     = is_string( $value ) ? str_replace( '\\', '\\\\\\\\', "'" . $value . "'" ) : $value;
-					$main_code = preg_replace( '/([^a-zA-Z_])((self|\\\\?' . $className . ')\:\:' . $matches['name'][ $i ] . ')([^a-zA-Z_])/i',
-							'${1}'.$value . '${4}', $main_code );
+                // If constant has no namespace - use current
+                if (strpos($constantName, '\\') === false) {
+                    $constantName = $namespace.'\\'.$constantName;
+                }
+
+				// Add constant name
+				$constantName .= '::'.$matches['name'][$i];
+
+                // Check if we have this constant defined
+				if (defined($constantName)) {
+                    // Get constant value
+					$value = constant($constantName);
+                    // Fix slashes, add quotes for string
+					$value = is_string($value) ? str_replace('\\', '\\\\\\\\', "'" . $value . "'") : $value;
+                    $replacer = str_replace('\\', '\\\\\\\\', $constantName);
+                    // Replace constant call in the code
+					$main_code = preg_replace(
+                        '/'.$replacer.'/i', //([;=+-\/*%., ])
+                        $value,
+                        $main_code
+                    );
 				}
 			}
-
 		}
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
