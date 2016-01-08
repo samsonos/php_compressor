@@ -952,6 +952,7 @@ class Compressor
 
 		if (preg_match_all('/(?<class>[\\\\a-z_]+)::(?<name>[a-z_]+)[;=+-\/*%., ]/i', $main_code, $matches)) {
 			for ($i = 0; $i < sizeof($matches['name']); $i++) {
+				$matchClass = $matches['class'][$i];
 				// If this is self - use current file class
 				if ($matches['class'][$i] === 'self') {
 					$constantName = $namespace . '\\' . $className;
@@ -974,13 +975,15 @@ class Compressor
 				// Add constant name
 				$constantName .= '::'.$matches['name'][$i];
 
+				$replaceName = $matchClass.'::'.$matches['name'][$i];
+
                 // Check if we have this constant defined
 				if (defined($constantName)) {
                     // Get constant value
 					$value = constant($constantName);
                     // Fix slashes, add quotes for string
 					$value = is_string($value) ? str_replace('\\', '\\\\\\\\', "'" . $value . "'") : $value;
-                    $replacer = str_replace('\\', '\\\\\\\\', $constantName);
+                    $replacer = str_replace('\\', '\\\\\\\\', $replaceName);
                     // Replace constant call in the code
 					$main_code = preg_replace(
                         '/'.$replacer.'/i', //([;=+-\/*%., ])
