@@ -223,6 +223,8 @@ class EventCompressor
                         if (isset($eventHandlers)) {
                             // Iterate all handlers
                             foreach ($eventHandlers as $handler) {
+
+                                //trace($handler);
                                 $call = '';
 
                                 // Get pointer to object
@@ -234,7 +236,7 @@ class EventCompressor
 
                                 // TODO: Not existing dynamic handlers what was excluded from compressed code
 
-                                if(is_object($object) && $object instanceof \samson\core\iModule && $object instanceof \samson\core\iModuleCompressable) {
+                                if(is_object($object) && $object instanceof \samsonframework\core\ViewInterface && $object instanceof \samsonframework\core\CompressInterface) {
                                     // Build object method call
                                     $call = 'm("' . $object->id() . '")->' . $event['method'] . '(';
                                     $this->log('   - Replacing event fire[##] with object function call [##]', $id, $call);

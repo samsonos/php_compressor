@@ -54,7 +54,7 @@ class Core
         // Unload all modules from core that does not implement interface iModuleCompressable
         foreach ($this->core->module_stack as $id => & $m) {
             // Unload modules that is not compressable
-            if (!is_a($m, '\samson\core\iModuleCompressable')) {
+            if (!is_a($m, 'samsonframework\core\CompressInterface')) {
                 $this->core->unload($id);
                 $this->logger->log(' -- [##] -> Unloading module from core', $id);
             } else { // Reconfigure module

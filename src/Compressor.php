@@ -65,6 +65,8 @@ class Compressor
 
     protected $resourceManager;
 
+	protected $classConst = array();
+
     /**
      * Compress web-application
      * @param string    $output  	    Path for creating compressed version
@@ -302,7 +304,10 @@ class Compressor
 			$module = & s()->module_stack[ $id ];
 
 			// Work only with compressable modules
-			if (is_a( $module, ns_classname( 'iModuleCompressable', 'samson\core'))) {
+			if (is_a( $module, ns_classname( 'CompressInterface', 'samsonframework\core'))||
+			    (isset($this->composerParameters['samsonphp_package_compressable'])&&
+			     ($this->composerParameters['samsonphp_package_compressable'] = 1))) {
+
 				/*if (in_array($id, array('local'))){
 					//trace($module);
 					//trace($data);
@@ -314,7 +319,7 @@ class Compressor
 		// Iterate only local modules
 		foreach ( s()->module_stack as $id => & $module ) {
             if (is_a( $module, \samson\core\AutoLoader::classname('samson\core\CompressableLocalModule'))) {
-				// Change path to module			
+				// Change path to module
 				$module->path('');
 			}
 		}		
@@ -407,6 +412,7 @@ class Compressor
 
         // Pointer to entry script code
         $entryScriptPath = __SAMSON_CWD__.__SAMSON_PUBLIC_PATH.'index.php';
+
         $entryScript = & $this->php[self::NS_GLOBAL][$entryScriptPath];
 
         // Collect all event system data
@@ -670,6 +676,9 @@ class Compressor
 		// Найдем все "ненужные" блоки кода и уберем их
 		$fileStr = preg_replace('/'.$rmarker_st.'.*?'.$rmarker_en.'/uis', '', $fileStr );
 
+		$className = '';
+		$classConstList = array();
+
         //TODO: Fix to normal external dependency with ResourceRouter
         $fileStr = preg_replace_callback('/(\\\\samson\\\\resourcer\\\\)?ResourceRouter::url\((\'|\")(?<path>[^,)]+)(\'|\")(,(?<module>[^)]+))?\);/i', array($this, 'rewriteResourceRouter'), $fileStr);
 		
@@ -709,18 +718,18 @@ class Compressor
 							// Получим идентификатор метки и текстовое представление
 							$id = isset( $tokens[ $j ][0] ) ? $tokens[ $j ][0] : '';
 							$text = isset( $tokens[ $j ][1] ) ? $tokens[ $j ][1] : '';
-						
+
 							//trace('"'.$id.'" - "'.$text.'"');
-							
+
 							// Если use используется в функции
 							if( $id == '(' ) { $j--; break; }
-								
+
 							// Если это закрывающая скобка - прекратим собирание пути к файлу
 							if( $id == ';' ) break;
-						
+
 							// Все пробелы игнорирую
 							if( $id == T_WHITESPACE ) continue;
-						
+
 							// Если у метки есть текстовое представление
 							if( isset( $text ) )
 							{
@@ -729,7 +738,7 @@ class Compressor
 								// Если это путь
 								else $_use .= $text;
 							}
-						}					
+						}
 						
 						// Если это не use в inline функции - добавим алиас в коллекцию 
 						// для данного ns с проверкой на уникальность
@@ -870,7 +879,59 @@ class Compressor
                         }
 						
 					}
-					break;				
+					break;
+
+					case T_INTERFACE:
+					case T_CLASS:
+						$main_code .= $text;
+						for ($j = $i+1; $j < sizeof($tokens); $j++)
+						{
+							// Get id and text of token
+							$id = isset( $tokens[ $j ][0] ) ? $tokens[ $j ][0] : '';
+							$text = isset( $tokens[ $j ][1] ) ? $tokens[ $j ][1] : '';
+
+							// Ignore all whitespace
+							if($id == T_WHITESPACE) continue;
+
+							if( isset( $text ) )
+							{
+								$className = $text;
+								break;
+							}
+						}
+
+						break;
+
+					case T_CONST:
+						$main_code .= $text;
+						$classConst = array();
+						$nameFlag = 'name';
+						for ($j = $i+1; $j < sizeof($tokens); $j++)
+						{
+							// Get id and text of token
+							$id = isset( $tokens[ $j ][0] ) ? $tokens[ $j ][0] : '';
+							$text = isset( $tokens[ $j ][1] ) ? $tokens[ $j ][1] : '';
+							if($id == ';') break;
+
+							// Ignore all whitespace
+							if($id == T_WHITESPACE) continue;
+
+							if($id == '=') {
+								$nameFlag = 'value';
+								continue;
+							}
+
+
+							if( isset( $text ) )
+							{
+								// Is it defined constant
+								if( isset( $consts[ $text ])) $classConst[$nameFlag] = $consts[ $text ];
+								else $classConst[$nameFlag] = $text;
+							}
+						}
+						$classConstList[$classConst['name']] = $classConst['value'];
+
+						break;
 		
 					// Собираем основной код программы
 					default: $main_code .= $text; break;
@@ -878,14 +939,30 @@ class Compressor
 			}
 		}		
 		
-		//trace(' - Вышли из функции:'.$path.'('.$namespace.')');
-		//trace('');			
-		
+
 		// Replace all class shortcut usage with full name
 		if (sizeof($file_uses)) {
             $main_code = $this->removeUSEStatement($main_code, $file_uses);
         }
-		
+
+		$matches = array();
+		if ($className == 'AutoLoader') {
+			$temp = '';
+		}
+
+		if (preg_match_all('/[^a-zA-Z_]((?<class>self|\\\\?'.$className.')\:\:(?<name>\w+))[^a-zA-Z_]/i', $main_code, $matches)) {
+			for ( $i = 0; $i < sizeof( $matches['name'] ); $i ++ ) {
+				$constantName = ( ( $matches['class'][ $i ]{0} == '\\' ) ? $className : $namespace . '\\' . $className ) . '::' . $matches['name'][ $i ];
+
+				if ( defined( $constantName ) ) {
+					$value     = constant( $constantName );
+					$value     = is_string( $value ) ? str_replace( '\\', '\\\\\\\\', "'" . $value . "'" ) : $value;
+					$main_code = preg_replace( '/([^a-zA-Z_])((self|\\\\?' . $className . ')\:\:' . $matches['name'][ $i ] . ')([^a-zA-Z_])/i',
+							'${1}'.$value . '${4}', $main_code );
+				}
+			}
+
+		}
 		// Запишем в коллекцию кода полученный код
 		$code[ $namespace ][ $path ] = $main_code;
 
@@ -1008,7 +1085,7 @@ class Compressor
 		// Iterate found use statements
 		foreach (array_unique($classes) as $full_class) {
 			// Get class shortcut
-			$class_name = classname($full_class);				
+			$class_name = \samson\core\AutoLoader::getOnlyClass($full_class);
 			
 			// Check class existance
 			if( !class_exists($full_class) && !interface_exists($full_class) ) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class );
@@ -1017,14 +1094,17 @@ class Compressor
 			$code = preg_replace( '/([^\\\a-z])'.$class_name.'::/i', '$1'.$full_class.'::', $code );
 						
 			// Replace class implements calls
-            		$code = preg_replace( '/\s+implements(.*\W)'.$class_name.'([^\\\])/i', ' implements $1'.$full_class.'$2 ', $code );
+			$code = preg_replace( '/\s+implements(.*\W)'.$class_name.'([^\\\])/i', ' implements $1'.$full_class.'$2 ', $code );
 
 			// Handle instanceof operator
             		$code = preg_replace( '/instanceof\s+'.$class_name.'/i', 'instanceof '.$full_class.'', $code );
 
 			// Replace class extends calls
 			$code = preg_replace( '/extends\s+'.$class_name.'/i', 'extends '.$full_class.'', $code );
-			
+
+			// Replace multiple class extends calls
+			$code = preg_replace( '/\s+extends(.*\W),?\s'.$class_name.'([^\\\])/i', ' extends $1'.$full_class.'$2 ', $code );
+
 			// Replace class hint calls
 			$code = preg_replace( '/(\(|\s|\,)\s*'.$class_name.'\s*(&|$)/i', '$1'.$full_class.' $2', $code );
 
