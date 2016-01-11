@@ -946,12 +946,17 @@ class Compressor
         }
 
 		$matches = array();
-		if ($className == 'AutoLoader') {
+		if ($className == 'Module') {
 			$temp = '';
 		}
 
-		if (preg_match_all('/(?<class>[\\\\a-z_]+)::(?<name>[a-z_]+)[;=+-\/*%., ]/i', $main_code, $matches)) {
+		if (preg_match_all('/(?<class>[\\\\a-zA-Z_]+)::(?<name>[a-zA-Z_]+)(?<end>[):;=+-\/*%., \n\t])/i', $main_code, $matches)) {
 			for ($i = 0; $i < sizeof($matches['name']); $i++) {
+
+				if ($matches['name'][$i] == 'ROUTING_LOGIC_FUNCTION') {
+					trace('!!!!');
+				}
+
 				$matchClass = $matches['class'][$i];
 				// If this is self - use current file class
 				if ($matches['class'][$i] === 'self') {
@@ -975,7 +980,8 @@ class Compressor
 				// Add constant name
 				$constantName .= '::'.$matches['name'][$i];
 
-				$replaceName = $matchClass.'::'.$matches['name'][$i];
+				$replaceName = $matchClass.'::'.$matches['name'][$i].$matches['end'][$i];
+
 
                 // Check if we have this constant defined
 				if (defined($constantName)) {
@@ -983,11 +989,12 @@ class Compressor
 					$value = constant($constantName);
                     // Fix slashes, add quotes for string
 					$value = is_string($value) ? str_replace('\\', '\\\\\\\\', "'" . $value . "'") : $value;
-                    $replacer = str_replace('\\', '\\\\\\\\', $replaceName);
+                    $replacer = str_replace('\\', '\\\\', $replaceName);
+					$replacer = str_replace(array(')'),array('\)'),$replacer);
                     // Replace constant call in the code
 					$main_code = preg_replace(
                         '/'.$replacer.'/i', //([;=+-\/*%., ])
-                        $value,
+                        $value.$matches['end'][$i],
                         $main_code
                     );
 				}
