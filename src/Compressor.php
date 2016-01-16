@@ -132,7 +132,7 @@ class Compressor
 
         // Template re-rendering
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
-        Event::fire('core.rendered', array(&$view_html, array(), m('compressor')));
+        Event::fire('core.rendered', array(&$view_html, array('file'=>$view_file), m('compressor')));
 
         $view_php = "<<<'EOT'" . "\n" . $view_html . "\n" . "EOT;";
 
