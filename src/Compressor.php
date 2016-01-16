@@ -332,13 +332,18 @@ class Compressor
             // Remove all old javascript and css
             \samson\core\File::clear($this->output, array('js', 'css'), $ignoreFolders);
 
-            // Manage javascript resource
-            $javascriptManager = new resource\JavaScript($this);
-            $javascriptManager->compress(__SAMSON_CWD__ . $rr->cached['js'], $this->output . basename($rr->cached['js']));
 
-            // Manage CSS resource
-            $cssManager = new resource\CSS($this, $rr);
-            $cssManager->compress(__SAMSON_CWD__ . $rr->cached['css'], $this->output . basename($rr->cached['css']));
+            foreach ($rr->cached['js'] as $jsCachedFile) {
+                // Manage javascript resource
+                $javascriptManager = new resource\JavaScript($this);
+                $javascriptManager->compress(__SAMSON_CWD__ . $jsCachedFile, $this->output . basename($jsCachedFile));
+            }
+
+            foreach ($rr->cached['css'] as $cssCachedFile) {
+                // Manage CSS resource
+                $cssManager = new resource\CSS($this, $rr);
+                $cssManager->compress(__SAMSON_CWD__ . $cssCachedFile, $this->output . basename($cssCachedFile));
+            }
         }
 
         // Copy main project composer.json
