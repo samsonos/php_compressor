@@ -313,7 +313,7 @@ class Compressor
             }
 
             // Change path to local modules
-            if (is_a($module, '\samson\core\CompressableLocalModule')) {
+            if (is_a($module, '\samson\core\VirtualModule')) {
                 $module->path('');
             }
         }
