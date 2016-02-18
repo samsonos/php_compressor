@@ -63,8 +63,10 @@ class CSS extends Generic
                     // Получим путь к ресурсу используя маршрутизацию
                     if ($this->resolver->parseURL($url, $module, $path)) {
                         //trace($matches['url'][$i].'-'.url()->base().$module.'/'.$path);
+                        // Always remove first public path /www/
+                        $path = ltrim(str_replace(__SAMSON_PUBLIC_PATH, '', $path), '/');
                         // Заменим путь в исходном файле
-                        $text = str_replace($url, url()->base() . ($module == 'local' ? '' : $module . '/') . $path, $text);
+                        $text = str_replace($url, url()->base() . ($module == 'local' ? '' : $module . '/www/') . $path, $text);
                     }
                 }
             }
@@ -74,4 +76,3 @@ class CSS extends Generic
         file_put_contents($toFilePath, $text);
     }
 }
-
