@@ -751,12 +751,18 @@ class Compressor
                             //TODO: Not fully qualified trait name adds slash before
                             $_use = $classStared ? '\\'.$namespace.$_use : $_use;
 
-                            // Add local file uses
-                            $file_uses[] = $_use;
+                            // Leave trait
+                            // TODO: Import trait code
+                            if (trait_exists($_use)) {
+                                $main_code .= ' use '.$_use.';';
+                            } else {
+                                // Add local file uses
+                                $file_uses[] = $_use;
 
-                            // TODO: Вывести замечание что бы код везде был одинаковый
-                            if (!in_array($_use, $uses)) {
-                               $uses[] = $_use;
+                                // TODO: Вывести замечание что бы код везде был одинаковый
+                                if (!in_array($_use, $uses)) {
+                                    $uses[] = $_use;
+                                }
                             }
                         } else {
                             $main_code .= ' use ';
@@ -908,7 +914,6 @@ class Compressor
                                 $nameFlag = 'value';
                                 continue;
                             }
-
 
                             if (isset($text)) {
                                 // Is it defined constant
