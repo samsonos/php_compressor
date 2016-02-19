@@ -198,7 +198,7 @@ class Compressor
         }
 
         // Call special method enabling module personal resource post-management on compressing
-        $module->afterCompress($this, $this->php);
+        $module->afterCompress($this, $module_php);
 
         // Gather all code in to global code collection with namespaces
         $this->code_array_combine($module_php, $this->php);
@@ -677,6 +677,9 @@ class Compressor
         //TODO: Fix to normal external dependency with ResourceRouter
         $fileStr = preg_replace_callback('/(\\\\samson\\\\resourcer\\\\)?ResourceRouter::url\((\'|\")(?<path>[^,)]+)(\'|\")(,(?<module>[^)]+))?\);/i', array($this, 'rewriteResourceRouter'), $fileStr);
 
+        /** @var bool $classStared Flag for matching trait uses */
+        $classStared = false;
+
         // Разберем код программы
         $tokens = token_get_all($fileStr);
         for ($i = 0; $i < sizeof($tokens); $i++) {
@@ -704,7 +707,6 @@ class Compressor
 
                     // Обработаем алиасы
                     case T_USE:
-
                         $_use = '';
 
                         // Переберем все что иде после комманды алиаса
@@ -745,14 +747,22 @@ class Compressor
                             // Преведем все use к одному виду
                             if ($_use{0} !== '\\') $_use = '\\' . $_use;
 
-                            // Add local file uses
-                            $file_uses[] = $_use;
+                            // Consider rewriting trait usage fully qualified name
+                            //TODO: Not fully qualified trait name adds slash before
+                            $_use = $classStared ? '\\'.$namespace.$_use : $_use;
 
-                            // TODO: Вывести замечание что бы код везде был одинаковый
-                            if (!in_array($_use, $uses)) {
+                            // Leave trait
+                            // TODO: Import trait code
+                            if (trait_exists($_use)) {
+                                $main_code .= ' use '.$_use.';';
+                            } else {
+                                // Add local file uses
+                                $file_uses[] = $_use;
 
-
-                                $uses[] = $_use;
+                                // TODO: Вывести замечание что бы код везде был одинаковый
+                                if (!in_array($_use, $uses)) {
+                                    $uses[] = $_use;
+                                }
                             }
                         } else {
                             $main_code .= ' use ';
@@ -869,6 +879,7 @@ class Compressor
 
                     case T_INTERFACE:
                     case T_CLASS:
+                        $classStared = true;
                         $main_code .= $text;
                         for ($j = $i + 1; $j < sizeof($tokens); $j++) {
                             // Get id and text of token
@@ -903,7 +914,6 @@ class Compressor
                                 $nameFlag = 'value';
                                 continue;
                             }
-
 
                             if (isset($text)) {
                                 // Is it defined constant
@@ -1099,6 +1109,11 @@ class Compressor
     {
         // Iterate found use statements
         foreach (array_unique($classes) as $full_class) {
+            // Ignore trait uses
+            if (trait_exists($full_class)) {
+                continue;
+            }
+
             // Get class shortcut
             $class_name = \samson\core\AutoLoader::getOnlyClass($full_class);
 
