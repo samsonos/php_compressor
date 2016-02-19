@@ -170,6 +170,10 @@ class Compressor
             // Internal collection of module php code, not views
             $module_php = array();
 
+            foreach ($data->classes as $key => $php) {
+                $this->compress_php($key, $module, $module_php);
+            }
+            
             // Iterate module plain php code
             foreach ($data->php as $php) {
                 $this->compress_php($php, $module, $module_php);
