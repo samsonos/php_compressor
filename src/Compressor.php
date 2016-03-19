@@ -753,7 +753,9 @@ class Compressor
 
                             // Consider rewriting trait usage fully qualified name
                             //TODO: Not fully qualified trait name adds slash before
-                            $_use = $classStared ? '\\'.$namespace.$_use : $_use;
+                            $_use = $classStared && strpos($_use, $namespace) !== false
+                                ? '\\'.$namespace.$_use
+                                : $_use;
 
                             // Leave trait
                             // TODO: Import trait code
@@ -1122,7 +1124,9 @@ class Compressor
             $class_name = \samson\core\AutoLoader::getOnlyClass($full_class);
 
             // Check class existance
-            if (!class_exists($full_class) && !interface_exists($full_class)) return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class);
+            if (!class_exists($full_class) && !interface_exists($full_class)) {
+                return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class);
+            }
 
             // Replace class static call
             $code = preg_replace('/([^\\\a-z])' . $class_name . '::/i', '$1' . $full_class . '::', $code);

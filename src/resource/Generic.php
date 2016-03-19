@@ -64,7 +64,7 @@ class Generic implements CompressibleInterface
             // Create folder with correct mode
             if (mkdir($path, $mode, true)) {
                 // Change folder group
-                chgrp($path, $group);
+                @chgrp($path, $group);
 
                 return true;
             } else {
