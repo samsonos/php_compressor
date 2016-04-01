@@ -749,12 +749,12 @@ class Compressor
                             //$_use = strtolower($_use);
 
                             // Преведем все use к одному виду
-                            if ($_use{0} !== '\\') $_use = '\\' . $_use;
+                            if (!$classStared && $_use{0} !== '\\') $_use = '\\' . $_use;
 
                             // Consider rewriting trait usage fully qualified name
                             //TODO: Not fully qualified trait name adds slash before
-                            $_use = $classStared && strpos($_use, $namespace) !== false
-                                ? '\\'.$namespace.$_use
+                            $_use = $classStared && $_use{0} !== '\\'
+                                ? '\\'.$namespace.'\\'.$_use
                                 : $_use;
 
                             // Leave trait
