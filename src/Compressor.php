@@ -155,7 +155,7 @@ class Compressor
         $this->current = &$module;
 
         // Build output module path
-        $module_output_path = $id == 'local' ? '' : $id . '/';
+        $module_output_path = $id == 'local' ? '' : basename($module->path()) . '/';
 
         // Build resource source path
         $module_path = $id == 'local' ? $module->path() . __SAMSON_PUBLIC_PATH : $module->path();
