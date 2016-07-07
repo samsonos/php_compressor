@@ -1119,18 +1119,6 @@ class Compressor
         // Iterate found use statements
         foreach (array_unique($classes) as $full_class) {
             // Ignore trait uses
-//            if (strpos($full_class, 'Trait') !== false) {
-//
-//                trace($full_class,1);
-//                trace(trait_exists('\ListTrait', true),1);
-//                trace(trait_exists('\ListTrait', false),1);
-//                trace(trait_exists('ListTrait', true),1);
-//                trace(trait_exists('ListTrait', false),1);
-//                die();
-//
-//                continue;
-//            }
-
             if (trait_exists($full_class)) {
                 continue;
             }
