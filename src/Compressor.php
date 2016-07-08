@@ -745,23 +745,27 @@ class Compressor
                         // Если это не use в inline функции - добавим алиас в коллекцию
                         // для данного ns с проверкой на уникальность
                         if ($id !== '(') {
-                            // Нижний регистр
-                            //$_use = strtolower($_use);
-
-                            // Преведем все use к одному виду
-                            if (!$classStared && $_use{0} !== '\\') $_use = '\\' . $_use;
-
-                            // Consider rewriting trait usage fully qualified name
-                            //TODO: Not fully qualified trait name adds slash before
-                            $_use = $classStared && $_use{0} !== '\\'
-                                ? '\\'.$namespace.'\\'.$_use
+                            // If this tait use
+                            if ($classStared) {
+                                // Consider rewriting trait usage fully qualified name
+                                //TODO: Not fully qualified trait name adds slash before
+                                $_use = strpos($_use, '\\') === false
+                                ? '\\' . $namespace . '\\' . $_use
                                 : $_use;
 
-                            // Leave trait
-                            // TODO: Import trait code
-                            if (trait_exists($_use)) {
-                                $main_code .= ' use '.$_use.';';
+                                // TODO: Import trait code
+                                if (!trait_exists($_use)) {
+                                    throw new \Exception('Trait "' . $_use . '" does not exists in "' . $path . '"');
+                                } else {
+                                    $main_code .= ' use ' . $_use . ';';
+                                }
+
                             } else {
+                                // Преведем все use к одному виду
+                                if ($_use{0} !== '\\') {
+                                    $_use = '\\' . $_use;
+                                }
+
                                 // Add local file uses
                                 $file_uses[] = $_use;
 
