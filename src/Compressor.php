@@ -3,10 +3,12 @@ namespace samsonphp\compressor;
 
 use samson\core\Core;
 use samson\core\iModule;
+use samsonframework\localfilemanager\LocalFileManager;
 use samsonframework\resource\ResourceMap;
 use samsonos\compressor\Module;
 use samsonphp\compressor\resource\JavaScript;
 use samsonphp\event\Event;
+use samsonphp\resource\Router;
 
 /**
  * Module for automatic code optimization|compression
@@ -18,6 +20,10 @@ class Compressor
 {
     /** Identifier of global namespace */
     const NS_GLOBAL = '';
+
+    const E_CREATE_MODULE_LIST = 'compressor.create.module.list';
+
+    const E_CREATE_RESOURCE_LIST = 'compressor.create.resource.list';
 
     /** Array key for storing last generated data */
     const VIEWS = 'views';
@@ -68,6 +74,12 @@ class Compressor
 
     protected $classConst = array();
 
+
+    protected $resourceUrlsList = [];
+
+    /** @var FileManagerInterface File system manager */
+    protected $fileManager;
+
     /**
      * Compress web-application
      * @param string $output Path for creating compressed version
@@ -79,6 +91,8 @@ class Compressor
     public function __construct($output = 'out/', $debug = false, $environment = 'prod', $phpVersion = PHP_VERSION, $configuration = array())
     {
         $this->resourceManager = new resource\Generic($this);
+
+        $this->fileManager = new LocalFileManager();
 
         $this->output = $output;
         $this->debug = $debug;
@@ -132,7 +146,10 @@ class Compressor
 
         // Template re-rendering
         // TODO: We must split regular view and template file to handle differently, for now nothing will change but in future....
-        Event::fire('core.rendered', array(&$view_html, array('file'=>$view_file), m('compressor')));
+
+        $template = !isset($this->resourceUrlsList[$view_file])?Router::I_MAIN_PROJECT_TEMPLATE:$view_file;
+
+        Event::fire('core.rendered', array(&$view_html, $this->resourceUrlsList[$template]));
 
         $view_php = "<<<'EOT'" . "\n" . $view_html . "\n" . "EOT;";
 
@@ -306,6 +323,39 @@ class Compressor
         // Define global views collection
         $this->php[self::NS_GLOBAL][self::VIEWS] = "\n" . '$GLOBALS["__compressor_files"] = array();';
 
+        // If resourcer is loaded - copy css and js
+        // Link
+        $rr = &s()->module_stack['resourcer'];
+
+        // Iterate all css and js resources
+        $ignoreFolders = array();
+        foreach ($this->ignoredFolders as $folder) {
+            $ignoreFolders[] = $this->output . $folder;
+        }
+
+        // Remove all old javascript and css
+        \samson\core\File::clear($this->output, array('js', 'css'), $ignoreFolders);
+
+        $moduleListArray = [];
+
+        //$moduleListArray[Router::I_MAIN_PROJECT_TEMPLATE] = $this->system->module_stack;
+
+        Event::fire(self::E_CREATE_MODULE_LIST, array(& $moduleListArray));
+
+        $resource = new Resource($this->fileManager);
+
+        foreach ($moduleListArray as $template => $moduleList)
+        {
+            $resourceUrls = [];
+
+            Event::fire(self::E_CREATE_RESOURCE_LIST, array(& $resourceUrls, $moduleList));
+
+            foreach ($resourceUrls as $type => $urls) {
+                $file = $resource->compress($urls, $type, $this->output);
+                $this->resourceUrlsList[$template][$type] = [DIRECTORY_SEPARATOR.$file];
+            }
+        }
+
         // Iterate core ns resources collection
         foreach (s()->module_stack as $id => &$module) {
             // Work only with compressable modules
@@ -322,33 +372,25 @@ class Compressor
             }
         }
 
-        // If resourcer is loaded - copy css and js
-        if (isset(s()->module_stack['resourcer'])) {
-            // Link
-            $rr = &s()->module_stack['resourcer'];
-
-            // Iterate all css and js resources
-            $ignoreFolders = array();
-            foreach ($this->ignoredFolders as $folder) {
-                $ignoreFolders[] = $this->output . $folder;
-            }
-
-            // Remove all old javascript and css
-            \samson\core\File::clear($this->output, array('js', 'css'), $ignoreFolders);
 
 
-            foreach ($rr->cached['js'] as $jsCachedFile) {
-                // Manage javascript resource
-                $javascriptManager = new resource\JavaScript($this);
-                $javascriptManager->compress(__SAMSON_CWD__ . $jsCachedFile, $this->output . basename($jsCachedFile));
-            }
 
-            foreach ($rr->cached['css'] as $cssCachedFile) {
-                // Manage CSS resource
-                $cssManager = new resource\CSS($this, $rr);
-                $cssManager->compress(__SAMSON_CWD__ . $cssCachedFile, $this->output . basename($cssCachedFile));
-            }
+
+
+
+
+        /*foreach ($rr->cached['js'] as $jsCachedFile) {
+            // Manage javascript resource
+            $javascriptManager = new resource\JavaScript($this);
+            $javascriptManager->compress(__SAMSON_CWD__ . $jsCachedFile, $this->output . basename($jsCachedFile));
         }
+
+        foreach ($rr->cached['css'] as $cssCachedFile) {
+            // Manage CSS resource
+            $cssManager = new resource\CSS($this, $rr);
+            $cssManager->compress(__SAMSON_CWD__ . $cssCachedFile, $this->output . basename($cssCachedFile));
+        }*/
+    //}
 
         // Copy main project composer.json
         $composerPath = __SAMSON_CWD__ . 'composer.json';
@@ -945,7 +987,7 @@ class Compressor
 
 
         // Replace all class shortcut usage with full name
-        if (sizeof($file_uses)) {
+        if (count($file_uses)) {
             $main_code = $this->removeUSEStatement($main_code, $file_uses);
         }
 
@@ -1129,7 +1171,8 @@ class Compressor
 
             // Check class existance
             if (!class_exists($full_class) && !interface_exists($full_class)) {
-                return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class);
+                //return e('Found USE statement for undeclared class ##', E_SAMSON_FATAL_ERROR, $full_class);
+                continue;
             }
 
             // Replace class static call
