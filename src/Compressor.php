@@ -25,6 +25,8 @@ class Compressor
 
     const E_CREATE_RESOURCE_LIST = 'compressor.create.resource.list';
 
+    const E_RESOURCE_COMPRESS = 'compressor.resource.compress';
+
     /** Array key for storing last generated data */
     const VIEWS = 'views';
 
