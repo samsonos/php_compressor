@@ -531,6 +531,7 @@ class Compressor
         }
 
         $index_php = $this->removeBlankLines($index_php);
+        $index_php = preg_replace('/(declare *\( *strict_types *= *1 *\) *;)/i', ' ', $index_php);
 
         // Запишем пусковой файл
         file_put_contents($this->output . 'index.php', '<?php ' . $index_php . "\n" . '?>');
